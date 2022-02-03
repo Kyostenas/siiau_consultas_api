@@ -21,6 +21,7 @@ ANCHO_TABLA_HORARIO = 17
 ESP_FAL_SUB_MATERIA = 4
 I_REF_CARRERA_ESTUDIANTE = 0  # Esta es en las carreras registradas del estudiante
 RANGO_CICLO_IN_CARR_ES = slice(1, 3)
+ANCHO_TABLA_OFERTA = 7  # Sin incluir columna de horario ni profesor
 
 
 class RefererSession(Session):
@@ -61,7 +62,6 @@ class CentroCompleto(NamedTuple):
 
 class CicloCompleto(NamedTuple):
     ref_ciclo: str  # el nombre que maneja siiau (2019 B -> 201920)
-    ref_publica_ciclo: str  # la que se muestra en siiau  (202210 -> "2022 A")
     nombre_completo: str  # 2022 A -> "Calendario 22 A"
 
 
@@ -133,6 +133,19 @@ def websp_findall(response, **findall):
     return resultados
 
 
+def preparar_para_busqueda(cadena: str) -> str:
+    """
+    Prepara una cadena para buscar coincidencias convirtiéndola
+    a minúscula toda, borrando espacios.
+
+    "Una cadena de texto" => "unacadenadetexto"
+    """
+    sin_espacios = ''.join(cadena.split(' '))
+    minusculas = sin_espacios.lower()
+
+    return minusculas
+
+
 class ConsultaSIIAU(object):
 
     def __init__(self,
@@ -189,29 +202,46 @@ class ConsultaSIIAU(object):
         tabla_dat_es_clase = NamedTuple('DatosEstudiante', campos_tabla_datos_estudiante)
         tabla_datos_estudiantes_completa = tabla_dat_es_clase(*tabla_datos_estudiantes)
         tabla_horario_completa = HorarioCompletoSiiau(*tabla_horario)
+        datos_horarios_siiau = DatosHorarioSiiau(tabla_datos_estudiantes_completa, tabla_horario_completa)
 
-        return DatosHorarioSiiau(tabla_datos_estudiantes_completa, tabla_horario_completa)
+        return datos_horarios_siiau
 
     def oferta(self, materia, centro, conCupos=False):
         url_oferta = f'{self.url_siiau_estudiante}' \
                      f'/wal/sspseca.consulta_oferta'
         payload = dict(ciclop=self.ciclo,
                        cup=centro,
-                       majrp=self.carrera,
+                       majrp='',
                        crsep=materia,
                        materiap='',
                        horaip='',
                        horafp='',
                        edifp='',
                        aulap='',
-                       dispp=centro if conCupos else '',
                        ordenp='0',
                        mostrarp=f'100000')
         resp = request('POST',
                        url_oferta,
                        data=payload)
+        encabezados = websp_findall(resp, name='th')
+        encabezados = list(map(limpiar_html, encabezados))
+        tabla_oferta = websp_findall(resp, name='td', attrs={'class': 'tddatos'})
+        tabla_oferta = list(map(limpiar_html, tabla_oferta))
+        subtabla_profesores = websp_findall(resp, attrs={'class', 'td1'})
+        subtabla_profesores = list(map(limpiar_html, subtabla_profesores))
+        subtabla_horario = websp_findall(resp, name='td', attrs=dict(align='center'))
+        subtabla_horario = list(map(limpiar_html, subtabla_horario))
 
-        return resp
+        tabla_oferta_limpia = []
+        for elem_of in tabla_oferta:
+            if '\n' not in elem_of:
+                tabla_oferta_limpia.append(elem_of)
+
+        tabla_oferta_limpia = particionar(tabla_oferta_limpia,
+                                          ANCHO_TABLA_OFERTA,
+                                          retornar_tuplas=False)
+
+        return tabla_oferta_limpia
 
     def carrera_s_estudiante(self) -> tuple[CarreraEstudiante]:
         url_carrera = f'{self.url_siiau_estudiante}' \
@@ -223,9 +253,7 @@ class ConsultaSIIAU(object):
                        p_majr_c=self.pidm_p)
         accept = ['text / html, application / xhtml + xml, application / xml',
                   'q = 0.9, image / avif, image / webp, image / apng, * / *',
-                  'q = 0.8, application / signed - exchange',
-                  'v = b3',
-                  'q = 0.9']
+                  'q = 0.8, application / signed - exchange', 'v = b3', 'q = 0.9']
         headers = {'Accept': ';'.join(accept),
                    'Accept-Encoding': 'gzip,deflate',
                    'Accept-Language': 'es-419,es;q=0.9',
@@ -234,7 +262,6 @@ class ConsultaSIIAU(object):
                    'Host': 'siiauescolar.siiau.udg.mx',
                    'Referer': f'{url_carrera}_sistema?p_pidm_n={self.pidm_p}',
                    'Upgrade-Insecure-Requests': '1'}
-
         url_carrera = join_payload_url(url_carrera, payload)
         resp = request('GET',
                        url=url_carrera,
@@ -264,49 +291,31 @@ class ConsultaSIIAU(object):
         resp = request('GET',
                        url=url_ciclos,
                        data=payload)
-        ciclos_opciones = websp_findall(resp, name='select', attrs={'id': 'cicloID'})
-        ciclos_opciones = tuple(map(limpiar_html, ciclos_opciones))[0].split('\n')
-        while '' in ciclos_opciones:
-            ciclos_opciones.remove('')
-        ciclos = tuple(map(lambda x: tuple(map(lambda z: tuple(z.split(' ')), x.split(' - '))), ciclos_opciones))
-        ciclos_completos = []
-        limpiar_letras = re.compile('[^\d]+')
-        limpar_no_letra_o_numero = re.compile('[^A-Za-z\d]+')
-        for ciclo_partido in ciclos:
-            if len(ciclo_partido[I_REF_CICLO]) == 1:
-                ref_ciclo = ciclo_partido[I_REF_CICLO][0]
-            else:
-                ref_ciclo = ''.join(ciclo_partido[I_REF_CICLO])
-            ref_sin_letras = re.sub(limpiar_letras, '', ref_ciclo)
-            ref_publica_ciclo = ''
-            for parte_nom_com in ciclo_partido[I_NOM_CICLO]:
-                parte_nom_com = re.sub(limpar_no_letra_o_numero, '', parte_nom_com)
-                print(parte_nom_com)
-                parte_sin_letras = re.sub(limpiar_letras, '', parte_nom_com)
-                if len(parte_sin_letras) == 0:
-                    pass
-                elif len(parte_nom_com) == 2:
-                    ref_publica_ciclo = ''.join([ref_ciclo[:2], parte_nom_com])  # Mitad del año ('2022X'[:2] -> 20)
-                    break
-                elif len(parte_nom_com) == len(ref_sin_letras):
-                    print('=====')
-                    print(ciclo_partido[I_NOM_CICLO])
-                    i_parte_actual = ciclo_partido[I_NOM_CICLO].index(parte_nom_com)
-                    ref_publica_ciclo = ''.join([ciclo_partido[I_NOM_CICLO][i_parte_actual],
-                                                 ciclo_partido[I_NOM_CICLO][i_parte_actual + 1]])
-                    break
-                elif len(parte_nom_com) == len(ref_ciclo):
-                    ref_publica_ciclo = parte_nom_com
-                    break
+        ciclos_opciones = websp_findall(resp, name='select', attrs=dict(id='cicloID'))
+        ciclos_opciones = list(map(limpiar_html, ciclos_opciones))[0].split('\n')
+        ciclos_opciones_limpios = list(map(lambda cic: cic.split(' - '), ciclos_opciones))
+        while [''] in ciclos_opciones_limpios:
+            ciclos_opciones_limpios.remove([''])
+        ciclos_completos = tuple(map(lambda partido: CicloCompleto(*partido), ciclos_opciones_limpios))
 
-            nuevo_ciclo_completo = CicloCompleto(ref_ciclo=ref_ciclo,
-                                                 ref_publica_ciclo=ref_publica_ciclo,
-                                                 nombre_completo=' '.join(ciclo_partido[I_NOM_CICLO]))
-            ciclos_completos.append(nuevo_ciclo_completo)
+        return ciclos_completos
 
-        return tuple(ciclos_completos)
+    def ciclos_por_busqueda(self, busqueda: str) -> tuple[CicloCompleto]:
+        todos_los_ciclos = self.ciclos()
+        encontrados: list[CicloCompleto] = []
+        patron = preparar_para_busqueda(busqueda)
+        for ciclo_sondeado in todos_los_ciclos:
+            ref = preparar_para_busqueda(ciclo_sondeado.ref_ciclo)
+            nom = preparar_para_busqueda(ciclo_sondeado.nombre_completo)
+            busqeda_ref = ref.find(patron)
+            busqueda_nom = nom.find(patron)
+            if busqeda_ref > -1 or busqueda_nom > -1:
+                encontrados.append(ciclo_sondeado)
+        empacados = tuple(encontrados)
 
-    def centros(self):
+        return empacados
+
+    def centros(self) -> tuple[CentroCompleto]:
         url_centros = f'{self.url_siiau_estudiante}' \
                       f'/wal/sgpofer.secciones'
         payload = dict(pidmp='',
@@ -319,11 +328,11 @@ class ConsultaSIIAU(object):
         centros_opciones = tuple(map(limpiar_html, centros_opciones))[0].split('\n')
         while '' in centros_opciones:
             centros_opciones.remove('')
-        centros_obtenidos = tuple(map(lambda x: tuple(x.split(' - ')), centros_opciones))
+        centros_obtenidos = tuple(map(lambda cen_opc: CentroCompleto(*cen_opc.split(' - ')), centros_opciones))
 
         return centros_obtenidos
 
-    def carreras(self, centro_cup_id: str):
+    def carreras(self, centro_cup_id: str) -> tuple[CarreraCompleta]:
         """
         Recibe el parameter 'cup', que para siiau es el id de los
         centros universitarios. Con esto se pueden consultar
@@ -344,8 +353,8 @@ class ConsultaSIIAU(object):
         for carrera_c in lista_carreras_completa:
             if carrera_c[I_REF_CARRERA] not in lista_referencias:
                 lista_carreras_completa.remove(carrera_c)
-
-        return tuple(lista_carreras_completa)
+        carreras_procesadas = tuple(map(lambda carr_c: CarreraCompleta(*carr_c), lista_carreras_completa))
+        return carreras_procesadas
 
     def materias(self, id_carrera: str) -> tuple[MateriaCompleta]:
         url_catalogo_materias = f'{self.url_consulta_siiau}' \
@@ -437,25 +446,9 @@ class SesionSIIAU(object):
 
 
 if __name__ == '__main__':
-
-
-    sesion = SesionSIIAU(usuario, contra)
-    pidm_p = sesion.obtener_pidm_p()
-    cookies = sesion.obtener_cookies()
-    consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p, )
-    #
-    # print(consulta.carrera_s_estudiante())
-    list(map(print, consulta.ciclos()))
-    # centros = consulta.centros()
-    #
-    # for centro in centros:
-    #     print(f'\n{centro[I_NOM_CENTRO]}\n{"="*15}\n')
-    #     carreras_centro = consulta.carreras(centro[I_ID_CENTRO])
-    #     for c in carreras_centro:
-    #         print(c)
-    #         materias_carrera = consulta.materias(c[I_REF_CARRERA])
-    #         for materia in materias_carrera:
-    #             datos_materia = (materia.clave, materia.titulo)
-    #             print(f'\t{datos_materia}')
-
-    # print(consulta.horario())
+    # sesion = SesionSIIAU(usuario, contra)
+    # pidm_p = sesion.obtener_pidm_p()
+    # cookies = sesion.obtener_cookies()
+    # consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p, )
+    # print(consulta.oferta(materia='I5377', centro='G'))
+    pass

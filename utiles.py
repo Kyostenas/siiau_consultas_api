@@ -51,7 +51,7 @@ def aplanar_lista(tf, i=0, c=0):
         return tf
 
 
-def particionar(lista, tam_rebanada, relleno=None, joinString=False):
+def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True):
     """
     Particionar una lista en rebanadas del largo deseado.
     """
@@ -59,7 +59,12 @@ def particionar(lista, tam_rebanada, relleno=None, joinString=False):
     desordenado = [lista[i::tam_rebanada] for i in range(tam_rebanada)]
     arreglado = [x + [relleno for _ in range(len(desordenado[0]) - len(x))]
                  for x in desordenado]
-    return list(zip(*arreglado))
+    if retornar_tuplas:
+        tuplas = list(zip(*arreglado))
+        return tuplas
+    else:
+        listas = list(map(list, zip(*arreglado)))
+        return listas
 
 
 def particion_arbitraria(lista, *partes, joinString=False):
