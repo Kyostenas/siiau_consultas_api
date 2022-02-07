@@ -1,4 +1,6 @@
-from typing import NamedTuple
+from __future__ import annotations
+
+from typing import NamedTuple, List
 from bs4 import BeautifulSoup as WebSp
 from utiles import limpiar_html
 from unidecode import unidecode
@@ -16,7 +18,7 @@ class Semestre(NamedTuple):
     ciclo: str
     carrera: str
     creditos: int
-    horario: list[dict]
+    horario: List[dict]
     horario_tabla: dict
 
 
@@ -57,13 +59,13 @@ class Formados(NamedTuple):
 
 
 class HorarioTabla(NamedTuple):
-    HORARIO: list[str]
-    L: list[str]
-    M: list[str]
-    I: list[str]
-    J: list[str]
-    V: list[str]
-    S: list[str]
+    HORARIO: List[str]
+    L: List[str]
+    M: List[str]
+    I: List[str]
+    J: List[str]
+    V: List[str]
+    S: List[str]
 
 
 class HorasClase(NamedTuple):

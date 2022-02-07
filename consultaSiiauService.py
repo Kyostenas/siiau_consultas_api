@@ -1,8 +1,12 @@
-from utiles import limpiar_html, particionar, convertir_ciclo_a_entero
+from utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_lista
 from bs4 import BeautifulSoup as WebSp
 from requests import request, Session
-from typing import NamedTuple
+from typing import NamedTuple, Tuple, List
+from json import dumps
 import re
+
+VACIO = '\xa0'
+RETORNO = '\n'
 
 I_REF_CARRERA = 0
 I_NOM_CARRERA = 1
@@ -21,7 +25,11 @@ ANCHO_TABLA_HORARIO = 17
 ESP_FAL_SUB_MATERIA = 4
 I_REF_CARRERA_ESTUDIANTE = 0  # Esta es en las carreras registradas del estudiante
 RANGO_CICLO_IN_CARR_ES = slice(1, 3)
-ANCHO_TABLA_OFERTA = 7  # Sin incluir columna de horario ni profesor
+I_HORARIO_MATERIA_OFERTA = 8
+I_PROFESORES_MATERIA_OFERTA = 7
+ANCHO_TABLA_PROFES_OFERTA = 2
+I_DIAS_HORARIOS_OFERTA = 2
+DIA_VACIO_HORARIO_OFERTA = '.'
 
 
 class RefererSession(Session):
@@ -50,6 +58,40 @@ class MateriaCompleta(NamedTuple):
     centros_universitarios: str
 
 
+class ProfesorOferta(NamedTuple):
+    sesion: str
+    nombre: str
+
+
+class DiasHorarioOferta(NamedTuple):
+    L: bool
+    M: bool
+    I: bool
+    J: bool
+    V: bool
+    S: bool
+
+class HorarioOferta(NamedTuple):
+    sesion: str
+    hora: str
+    dias: DiasHorarioOferta
+    edif: str
+    aula: str
+    periodo: Tuple[str]
+
+
+class MateriaOferta(NamedTuple):
+    nrc: str
+    clave: str
+    materia: str
+    seccion: str
+    creditos: int
+    cupos: int
+    disponibles: int
+    profesores: List[ProfesorOferta]
+    horarios: List[HorarioOferta]
+
+
 class CarreraCompleta(NamedTuple):
     ref_carrera: str
     nombre_completo: str
@@ -66,23 +108,23 @@ class CicloCompleto(NamedTuple):
 
 
 class HorarioCompletoSiiau(NamedTuple):
-    nrc: tuple[str]
-    clave: tuple[str]
-    nombre_materia: tuple[str]
-    seccion: tuple[str]
-    creditos: tuple[int]
-    horario: tuple[str]
-    L: tuple[str]
-    M: tuple[str]
-    I: tuple[str]
-    J: tuple[str]
-    V: tuple[str]
-    S: tuple[str]
-    edificio: tuple[str]
-    aula: tuple[str]
-    profesor: tuple[str]
-    fecha_inicio: tuple[str]
-    fecha_fin: tuple[str]
+    nrc: Tuple[str]
+    clave: Tuple[str]
+    nombre_materia: Tuple[str]
+    seccion: Tuple[str]
+    creditos: Tuple[int]
+    horario: Tuple[str]
+    L: Tuple[str]
+    M: Tuple[str]
+    I: Tuple[str]
+    J: Tuple[str]
+    V: Tuple[str]
+    S: Tuple[str]
+    edificio: Tuple[str]
+    aula: Tuple[str]
+    profesor: Tuple[str]
+    fecha_inicio: Tuple[str]
+    fecha_fin: Tuple[str]
 
 
 class DatosHorarioSiiau(NamedTuple):
@@ -129,8 +171,7 @@ def websp_findall(response, **findall):
     return: A ResultSet of PageElements.
     rtype: bs4.element.ResultSet
     """
-    resultados = WebSp(response.text, 'html.parser').find_all(**findall)
-    return resultados
+    return WebSp(response.text, 'html.parser').find_all(**findall)
 
 
 def preparar_para_busqueda(cadena: str) -> str:
@@ -206,7 +247,7 @@ class ConsultaSIIAU(object):
 
         return datos_horarios_siiau
 
-    def oferta(self, materia, centro, conCupos=False):
+    def oferta(self, materia, centro, con_cupos=False):
         url_oferta = f'{self.url_siiau_estudiante}' \
                      f'/wal/sspseca.consulta_oferta'
         payload = dict(ciclop=self.ciclo,
@@ -223,27 +264,64 @@ class ConsultaSIIAU(object):
         resp = request('POST',
                        url_oferta,
                        data=payload)
-        encabezados = websp_findall(resp, name='th')
-        encabezados = list(map(limpiar_html, encabezados))
-        tabla_oferta = websp_findall(resp, name='td', attrs={'class': 'tddatos'})
-        tabla_oferta = list(map(limpiar_html, tabla_oferta))
-        subtabla_profesores = websp_findall(resp, attrs={'class', 'td1'})
-        subtabla_profesores = list(map(limpiar_html, subtabla_profesores))
-        subtabla_horario = websp_findall(resp, name='td', attrs=dict(align='center'))
-        subtabla_horario = list(map(limpiar_html, subtabla_horario))
+        tabla_oferta_html = WebSp(resp.content, 'html.parser')
 
-        tabla_oferta_limpia = []
-        for elem_of in tabla_oferta:
-            if '\n' not in elem_of:
-                tabla_oferta_limpia.append(elem_of)
+        materias_crudas = tabla_oferta_html.select('td.tddatos')
+        materias_limpias = list(map(lambda x: limpiar_html(x).replace(RETORNO*2, RETORNO).splitlines(keepends=False), materias_crudas))
+        for i_trozo in range(len(materias_limpias)):
+            while '' in materias_limpias[i_trozo]:
+                materias_limpias[i_trozo].remove('')
 
-        tabla_oferta_limpia = particionar(tabla_oferta_limpia,
-                                          ANCHO_TABLA_OFERTA,
-                                          retornar_tuplas=False)
+        # cuenta las columnas con más de 1 elemento, pues en las materias solo hay 1 por fila (profesores)
+        conteo_filas = sum(list(map(lambda columna: 1 if len(columna) > 1 else 0, materias_limpias)))
 
-        return tabla_oferta_limpia
+        tam_filas = int(len(materias_limpias) / conteo_filas)
+        materias_particionadas = particionar(materias_limpias, tam_filas, retornar_tuplas=False)
+        for i_fila, fila in enumerate(materias_particionadas):
+            puros_profes = materias_particionadas[i_fila].pop(I_PROFESORES_MATERIA_OFERTA)
+            profes_particionados = particionar(puros_profes, ANCHO_TABLA_PROFES_OFERTA)
+            nueva_lista_profes = []
+            for profe in profes_particionados:
+                nueva_lista_profes.append(ProfesorOferta(*profe))
+            materias_particionadas[i_fila] = aplanar_lista(fila)
+            materias_particionadas[i_fila].insert(I_PROFESORES_MATERIA_OFERTA, tuple(nueva_lista_profes))
 
-    def carrera_s_estudiante(self) -> tuple[CarreraEstudiante]:
+        horarios_crudos = tabla_oferta_html.select('table.td1')
+        horarios_limpios = []
+        for fila in horarios_crudos:
+            lista_fila = []
+            for sub_fila in fila:
+                lista_sub_fila = []
+                for sub_columna in sub_fila:
+                    sub_columna_limpia = limpiar_html(sub_columna)
+                    if sub_columna_limpia == VACIO:  # \xa0 aparece cuando es una celda vacia
+                        sub_columna_limpia = ' '
+                    if sub_columna_limpia != RETORNO:
+                        lista_sub_fila.append(sub_columna_limpia)
+                if len(lista_sub_fila) > 0:
+                    lista_fila.append(lista_sub_fila)
+            horarios_limpios.append(lista_fila)
+
+        for i_fila, fila in enumerate(horarios_limpios):
+            for i_sub_fila, sub_fila in enumerate(fila):
+                dias = sub_fila[I_DIAS_HORARIOS_OFERTA].split(' ')
+                nuevos_dias = []
+                for dia in dias:
+                    if dia == DIA_VACIO_HORARIO_OFERTA:
+                        nuevos_dias.append(False)
+                    else:
+                        nuevos_dias.append(True)
+                horarios_limpios[i_fila][i_sub_fila][I_DIAS_HORARIOS_OFERTA] = DiasHorarioOferta(*nuevos_dias)
+                horarios_limpios[i_fila][i_sub_fila] = HorarioOferta(*sub_fila)
+
+        for i_fila, fila in enumerate(materias_particionadas):
+            horarios_correspondientes = tuple(horarios_limpios[i_fila])
+            materias_particionadas[i_fila].insert(I_HORARIO_MATERIA_OFERTA, horarios_correspondientes)
+            materias_particionadas[i_fila] = MateriaOferta(*fila)
+
+        return tuple(materias_particionadas)
+
+    def carrera_s_estudiante(self) -> Tuple[CarreraEstudiante]:
         url_carrera = f'{self.url_siiau_estudiante}' \
                       f'/wal/gupmenug.menu'
         payload = dict(p_sistema_c='ALUMNOS',
@@ -282,7 +360,7 @@ class ConsultaSIIAU(object):
 
         return carreras_formateadas
 
-    def ciclos(self) -> tuple[CicloCompleto]:
+    def ciclos(self) -> Tuple[CicloCompleto]:
         url_ciclos = f'{self.url_siiau_estudiante}' \
                      f'/wal/sgpofer.secciones'
         payload = dict(pidmp='',
@@ -300,9 +378,9 @@ class ConsultaSIIAU(object):
 
         return ciclos_completos
 
-    def ciclos_por_busqueda(self, busqueda: str) -> tuple[CicloCompleto]:
+    def ciclos_por_busqueda(self, busqueda: str) -> Tuple[CicloCompleto]:
         todos_los_ciclos = self.ciclos()
-        encontrados: list[CicloCompleto] = []
+        encontrados: List[CicloCompleto] = []
         patron = preparar_para_busqueda(busqueda)
         for ciclo_sondeado in todos_los_ciclos:
             ref = preparar_para_busqueda(ciclo_sondeado.ref_ciclo)
@@ -315,7 +393,7 @@ class ConsultaSIIAU(object):
 
         return empacados
 
-    def centros(self) -> tuple[CentroCompleto]:
+    def centros(self) -> Tuple[CentroCompleto]:
         url_centros = f'{self.url_siiau_estudiante}' \
                       f'/wal/sgpofer.secciones'
         payload = dict(pidmp='',
@@ -332,7 +410,7 @@ class ConsultaSIIAU(object):
 
         return centros_obtenidos
 
-    def carreras(self, centro_cup_id: str) -> tuple[CarreraCompleta]:
+    def carreras(self, centro_cup_id: str) -> Tuple[CarreraCompleta]:
         """
         Recibe el parameter 'cup', que para siiau es el id de los
         centros universitarios. Con esto se pueden consultar
@@ -356,7 +434,7 @@ class ConsultaSIIAU(object):
         carreras_procesadas = tuple(map(lambda carr_c: CarreraCompleta(*carr_c), lista_carreras_completa))
         return carreras_procesadas
 
-    def materias(self, id_carrera: str) -> tuple[MateriaCompleta]:
+    def materias(self, id_carrera: str) -> Tuple[MateriaCompleta]:
         url_catalogo_materias = f'{self.url_consulta_siiau}' \
                                 f'/wco/scpcata.cataxcarr'
         payload = dict(carrerap=id_carrera,
@@ -446,9 +524,12 @@ class SesionSIIAU(object):
 
 
 if __name__ == '__main__':
+
     # sesion = SesionSIIAU(usuario, contra)
     # pidm_p = sesion.obtener_pidm_p()
     # cookies = sesion.obtener_cookies()
     # consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p, )
-    # print(consulta.oferta(materia='I5377', centro='G'))
+    # list(map(lambda x: print(dumps(x._asdict(), indent=4)), consulta.oferta(materia='I7024', centro='D')))
+    # print('='*150)
+    # list(map(lambda x: print(dumps(x._asdict(), indent=4)), consulta.oferta(materia='I5377', centro='G')))
     pass

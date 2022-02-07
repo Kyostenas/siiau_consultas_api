@@ -1,7 +1,5 @@
 from typing import NamedTuple
-from tabulate import tabulate
 import itertools
-import os
 
 
 class TablasHorario(NamedTuple):
@@ -30,8 +28,6 @@ def _hacer_tabla(horario: dict):
 
     descripciones = [('NRC', 'CLAVE', 'MATERIA', 'PROFESOR/ES')]
 
-    # print(horario_siiau)
-
     for nrc, valores in horario.items():
         for rango in valores['rango_por_dia']:
             y = rango[0] + 1
@@ -48,11 +44,6 @@ def _hacer_tabla(horario: dict):
                 '\n'.join(profes)
             ]
         )
-
-    os.system('clear')
-    print(tabulate(horario_tabla, 'firstrow', 'grid'))
-    print(tabulate(descripciones, 'firstrow', 'plain'))
-    input()
 
     return TablasHorario(horario_tabla, descripciones)
 

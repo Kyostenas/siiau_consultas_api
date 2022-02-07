@@ -6,7 +6,6 @@ la pena instalar una libreria o hacer un script sólo
 para suplirla.
 """
 
-from string import ascii_lowercase
 import re, io, json, xlwt, os
 from xlwt import Workbook
 import datetime
@@ -67,7 +66,7 @@ def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True):
         return listas
 
 
-def particion_arbitraria(lista, *partes, joinString=False):
+def particion_arbitraria(lista, *partes, join_string=False):
     """ 
     Particionar una lista, pero indicar el tamaño de cada
     particion manualmente.
@@ -79,7 +78,7 @@ def particion_arbitraria(lista, *partes, joinString=False):
     for derecha in partes:
         rebanada = slice(anterior, anterior + derecha)
         anterior = anterior + derecha
-        if joinString:
+        if join_string:
             particiones.append(
                 ''.join(lista[rebanada])
             )

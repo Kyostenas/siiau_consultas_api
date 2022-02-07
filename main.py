@@ -1,9 +1,9 @@
 """ MODULO PRINCIPAL """
 
 from typing import NamedTuple
-from siiau_consultas_api.consultaSiiauService import SesionSIIAU, ConsultaSIIAU
+from consultaSiiauService import SesionSIIAU, ConsultaSIIAU
 from semestreSiiau import HorarioSiiau
-from ofertaSegunSeleccion import Oferta
+from ofertaSegunSelecccion import Oferta
 from posiblesHorarios import combinar_nrcs
 
 CENTROS = {

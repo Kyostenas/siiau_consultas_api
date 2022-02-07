@@ -123,7 +123,7 @@ class Oferta(object):
                         aula_edificio = (horSimple.index(car) - 3) - 16
                         break
                 hor_sim_procesado = particion_arbitraria(horSimple, 2, 9, 6,
-                                                         aula_edificio, 17, joinString=True)
+                                                         aula_edificio, 17, join_string=True)
                 hor_sim_procesado[2] = list(hor_sim_procesado[2].replace('.', ''))
                 hor_sim_procesado = HorarioCompleto(ses=hor_sim_procesado[self.clave_horario['nrc']],
                                                     duracion=hor_sim_procesado[self.clave_horario['dur']],
