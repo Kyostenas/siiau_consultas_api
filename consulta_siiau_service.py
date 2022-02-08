@@ -2,7 +2,6 @@ from utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_
 from bs4 import BeautifulSoup as WebSp
 from requests import request, Session
 from typing import NamedTuple, Tuple, List
-from json import dumps
 import re
 
 VACIO = '\xa0'
@@ -36,6 +35,10 @@ class RefererSession(Session):
     def rebuild_auth(self, prepared_request, response):
         super().rebuild_auth(prepared_request, response)
         prepared_request.headers['Referer'] = response.url
+
+class DatosSesion(NamedTuple):
+    cookies: str
+    pidmp: int
 
 
 class MateriaCompleta(NamedTuple):
@@ -503,14 +506,18 @@ class SesionSIIAU(object):
                                    files=[],
                                    data=self.data)
 
-    def obtener_cookies(self) -> str:
+    def obtener(self):
+        return DatosSesion(cookies=self.__obtener_cookies(),
+                           pidmp=self.__obtener_pidm_p())
+
+    def __obtener_cookies(self) -> str:
         masa = self.resp_inicio.cookies.get_dict(self.url_base)
         horneado = [f'{nom}={val}' for nom, val in masa.items()]
         cookies = ';'.join(horneado)
 
         return cookies
 
-    def obtener_pidm_p(self) -> int:
+    def __obtener_pidm_p(self) -> int:
         bienvenida = WebSp(self.resp_inicio.text, "html.parser").find_all('input')
         for val in bienvenida:
             if 'p_pidm_n' in str(val):
@@ -518,18 +525,10 @@ class SesionSIIAU(object):
                 break
 
         limpiador = re.compile('[^\d]+')
-        pidm_p = re.sub(limpiador, '', str(bienvenida))
+        pidm_p = int(re.sub(limpiador, '', str(bienvenida)))
 
-        return int(pidm_p)
+        return pidm_p
 
 
 if __name__ == '__main__':
-
-    # sesion = SesionSIIAU(usuario, contra)
-    # pidm_p = sesion.obtener_pidm_p()
-    # cookies = sesion.obtener_cookies()
-    # consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p, )
-    # list(map(lambda x: print(dumps(x._asdict(), indent=4)), consulta.oferta(materia='I7024', centro='D')))
-    # print('='*150)
-    # list(map(lambda x: print(dumps(x._asdict(), indent=4)), consulta.oferta(materia='I5377', centro='G')))
-    pass
+    print('Esto no se debería mostrar...')
