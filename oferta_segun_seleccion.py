@@ -25,8 +25,8 @@ class Profesor(NamedTuple):
 
 class HorarioCompleto(NamedTuple):
     ses: str  # Identificador usado en SIIAU (¿Para qué sirve?)
-    duracion: str  # Horas de clase
-    dias: str  # Dias de clase
+    duracion: str  # Horas de named_tuple
+    dias: str  # Dias de named_tuple
     ubicacion: str  # Edificio y Aula (Por ahora unidos, mientras se soluciona)
     periodo: str  # Fecha Inicio - Fin
 
@@ -39,8 +39,8 @@ class MateriaCompleta(NamedTuple):
     creditos: int  # Creditos que otorga pasar la materia
     cupos: int  # Cupos que permite
     cupo_disponible: int  # Cupos actualmente disponibles
-    horarios: list[str]  # HorarioSiiau/s y lugares en los que se imparte la clase
-    profesores: list  # Conjunto de profesores/es que imparte/n la clase
+    horarios: list[str]  # HorarioSiiau/s y lugares en los que se imparte la named_tuple
+    profesores: list  # Conjunto de profesores/es que imparte/n la named_tuple
 
     # Horas por dia de la materia (para la tabla
     # ordenada del horario_siiau). Es un rango que marca

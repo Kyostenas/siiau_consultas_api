@@ -1,20 +1,8 @@
-from consulta_siiau_service import SesionSIIAU, ConsultaSIIAU
 from typing import NamedTuple, Union, List
+from utiles import es_alguna_instancia
 from os import get_terminal_size
 from tabulate import  tabulate
 from textwrap import wrap
-
-
-def es_alguna_instancia(a_comprobar, *instancia_de):
-    """
-    Comprobar si el valor ingresado es instancia de cualquiera de los tipos
-    solicitados, al menos uno de ellos.
-    """
-    es_instancia = False
-    for comprobacion in instancia_de:
-        es_instancia = es_instancia or isinstance(a_comprobar, comprobacion)
-
-    return es_instancia
 
 
 def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
@@ -55,14 +43,13 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         headers=encabezados,
                         tablefmt=formato,
                         numalign='left')
-    elif subtabla:
+    elif subtabla and tupla_es_named_tuple:
         encabezados = tuple(map(lambda x: x.upper(), tupla._asdict().keys()))
         cuerpo = []
         for col in tupla:
             if isinstance(col, bool):
                 col = 'si' if col else 'no'
             cuerpo.append(col)
-        print(cuerpo)
         return tabulate(tabular_data=[cuerpo],
                         headers=encabezados,
                         tablefmt='plain',
@@ -70,27 +57,6 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
 
 
 if __name__ == '__main__':
-    # sesion = SesionSIIAU(usuario, contra).obtener()
-    # pidm_p = sesion.pidmp
-    # cookies = sesion.cookies
-    # consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p)
-    # oferta = consulta.oferta(materia='I7024', centro='D')
-    # centros = consulta.centros()
-    # carreras = consulta.carreras(centros[0].id_centro)
-    # materias = consulta.materias('INCO')
-    # carreras_estudiante = consulta.carrera_s_estudiante()
-    # horario_estudiante = consulta.horario()
-    # print(named_tuple_a_tabla(centros))
-    # print(named_tuple_a_tabla(carreras))
-    # print(named_tuple_a_tabla(carreras_estudiante))
-    # print(named_tuple_a_tabla(horario_estudiante.horario, por_columnas=True))
-
-    # print(horario_estudiante)
-    # print(oferta)
-    # horario = consulta.horario()
-
-    # print('='*150)
-    # list(map(lambda x: print(dumps(x._asdict(), indent=4)), consulta.oferta(materia='I5377', centro='G')))
-    pass
+    print('Esto no se debería mostrar...')
 
 

@@ -158,3 +158,15 @@ def cadena_fecha_larga(incluirHora=True, separadorFecha='', separadorHora=''):
         return string_terminada
     else:
         return fecha_completa
+
+
+def es_alguna_instancia(a_comprobar, *instancia_de):
+    """
+    Comprobar si el valor ingresado es instancia de cualquiera de los tipos
+    solicitados, al menos uno de ellos.
+    """
+    es_instancia = False
+    for comprobacion in instancia_de:
+        es_instancia = es_instancia or isinstance(a_comprobar, comprobacion)
+
+    return es_instancia
