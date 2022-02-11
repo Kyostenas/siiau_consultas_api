@@ -19,10 +19,16 @@ NOMBRE_DE_MIEMBRO = 0
 VALOR_DE_MIEMBRO = 1
 HORA_SEP = '\\'
 MATERIA_SIN_HORARIO = 'Sin Hora'
+I_LUNES = 0
+I_MARTES = 1
+I_MIERCOES = 2
+I_JUEVES = 3
+I_VIERNES = 4
+I_SABADO = 5  # clases en sábado :(
 
 NOMBRES_DIAS = {1: 'Lunes',  2: 'Martes',  3: 'Miércoles',
                 4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
-                7: 'Domingo'}
+                7: 'Domingo'}  # Domingo porque en virtuales pueden comenzar en Domingo D:
 NOMBRES_MESES = {1: 'Enero',    2: 'Febrero',    3: 'Marzo',
                  4: 'Abril',    5: 'Mayo',       6: 'Junio',
                  7: 'Julio',    8: 'Agosto',     9: 'Septiembre',
@@ -56,6 +62,16 @@ class Clase(NamedTuple):
     fecha_inicio_completa: str
     fecha_final_completa: str
     # referencia_horario_tabla: dict
+
+
+class HorarioCompacto(NamedTuple):
+    horas: list
+    lunes: list
+    martes: list
+    miercoles: list
+    jueves: list
+    viernes: list
+    sabado: list
 
 
 def _rango_horas(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
@@ -156,12 +172,6 @@ def __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas: HorarioComp
     return datos_dia
 
 
-def __campos_named_tuple(named_tuple):
-    campos = named_tuple._fields
-    return {member[NOMBRE_DE_MIEMBRO]: member[VALOR_DE_MIEMBRO]
-            for member in getmembers(named_tuple) if member[NOMBRE_DE_MIEMBRO] in campos}
-
-
 def _procesar_dias_clase(datos_clase: dict, horario_por_columnas: HorarioCompletoSiiau, i_horario: int):
     hora_formato_siiau = horario_por_columnas.horario[i_horario].split('-')
     hora_inicio = hora_formato_siiau[HORA_INICIO_MATERIAS]
@@ -243,12 +253,42 @@ def estructurar_horario_por_clases(horario_por_columnas: HorarioCompletoSiiau):
     return clases
 
 
-def compactar_horario_por_clases(clases):
-    print(clases[0])
-    # for clase in clases:
-    #     print(clase)
+def _agregar_horas_y_nombres(h_por_horas: dict, dia: DiaClase, nombre_clase: str, i_dia):
+    for hora_clase in dia.rango_horas:
+        try:
+            h_por_horas[hora_clase][i_dia] = nombre_clase
+        except KeyError:
+            # Si no existe la fila de esa hora, agregarla
+            h_por_horas[hora_clase] = ['', '', '', '', '', '']  # cada cadena vacia es un día
+            h_por_horas[hora_clase][i_dia] = nombre_clase
 
-    # return None
+
+def compactar_horario_por_clases(clases):
+
+    horario_por_horas = dict()
+
+    for clase in clases:
+        if clase.dia_lu is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_lu, clase.nombre, I_LUNES)
+        if clase.dia_ma is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_ma, clase.nombre, I_MARTES)
+        if clase.dia_mi is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_mi, clase.nombre, I_MIERCOES)
+        if clase.dia_ju is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_ju, clase.nombre, I_JUEVES)
+        if clase.dia_vi is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_vi, clase.nombre, I_VIERNES)
+        if clase.dia_sa is not None:
+            _agregar_horas_y_nombres(horario_por_horas, clase.dia_sa, clase.nombre, I_SABADO)
+
+    horario_por_horas_ordenado = dict(sorted(horario_por_horas.items()))
+
+    horas = list(horario_por_horas_ordenado.keys())
+    clases_compactas_por_filas = list(horario_por_horas_ordenado.values())
+    clases_compactas_por_columna = list(zip(*clases_compactas_por_filas))
+    horario_compactado = HorarioCompacto(horas, *clases_compactas_por_columna)
+
+    return horario_compactado
 
 
 if __name__ == '__main__':
@@ -259,17 +299,21 @@ if __name__ == '__main__':
     ciclo = env['CICLO_ACTUAL']
 
 
-
     sesion = SesionSIIAU(usuario, contra).obtener()
     pidm_p = sesion.pidmp
     cookies = sesion.cookies
     consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p)
     datos_horario = consulta.horario()
 
-    horario_por_clases = estructurar_horario_por_clases(datos_horario.horario)
-    # compactar_horario_por_clases(horario_por_clases)
+    # print(named_tuple_a_tabla(datos_horario.horario, por_columnas=True))
+    # exit()
 
-    list(map(lambda x: print(x.nombre, '\n'), horario_por_clases))
+    horario_por_clases = estructurar_horario_por_clases(datos_horario.horario)
+    horario_compacto = compactar_horario_por_clases(horario_por_clases)
+
+    print(named_tuple_a_tabla(horario_compacto, por_columnas=True))
+
+
 
     # print(horario_compacto)
 
