@@ -21,7 +21,7 @@ I_CICLO_INICIO_MATERIA = 8
 I_AREA_MATERIA = 0
 RANGO_DEPS_CARRS_CENTROS = slice(13, 16)
 ANCHO_TABLA_HORARIO = 17
-ESP_FAL_SUB_MATERIA = 4
+ESP_FAL_SUB_CLASE = 4
 I_REF_CARRERA_ESTUDIANTE = 0  # Esta es en las carreras registradas del estudiante
 RANGO_CICLO_IN_CARR_ES = slice(1, 3)
 I_HORARIO_MATERIA_OFERTA = 8
@@ -236,29 +236,28 @@ class ConsultaSIIAU(object):
         encabezados_horario = tuple(map(convertir_a_identificador_valido, encabezados_horario))
         tabla_datos_estudiantes = tuple(tablas[:len(encabezados_datos_estudiantes)])
         tabla_horario = tablas[len(encabezados_datos_estudiantes):]
-        for i_dato in range(len(tabla_horario)):
-            if i_dato % ANCHO_TABLA_HORARIO == 0:
-                if tabla_horario[i_dato] == '':
-                    [tabla_horario.insert(i_dato + 1, '') for _ in range(ESP_FAL_SUB_MATERIA)]
-        tabla_horario = particionar(tabla_horario, len(encabezados_horario))
 
-        # Correccion para cuando ultima fila es subclase (misma claes, diferente horario)
-        for fila in tabla_horario:
-            if None in fila:
-                nones = fila.count(None)
-                nueva_fila = list(fila)
-                while None in nueva_fila:
-                    nueva_fila.remove(None)
-                for esp_blanco in range(nones):
-                    nueva_fila.insert(0, '')
-                i_fila_a_reemplazar = tabla_horario.index(fila)
-                tabla_horario[i_fila_a_reemplazar] = tuple(nueva_fila)
+        # Correccion a las filas extra de las clases, que es la misma clase con otro dia u hora,
+        # pero, al no tener los datos hasta la hora, en lugar de tener TODOS los espacios vacíos
+        # que debería, solo tiene 1. Con esto se agregan los espacios vacíos que deberían estar.
+        tabla_horario_corregida = []
+        buscador_de_fechas = re.compile('[0-3][0-9]-[0-1][0-9]-[\d][\d][\d][\d]')
+        contador_fechas = 0
+        for i_dato, dato in enumerate(tabla_horario):
+            if re.match(buscador_de_fechas, dato) is not None:
+                contador_fechas += 1
+            elif contador_fechas == 2:
+                contador_fechas = 0
+                if dato == '':
+                    [tabla_horario_corregida.append('') for _ in range(ESP_FAL_SUB_CLASE)]
+            tabla_horario_corregida.append(dato)
+        tabla_horario_corregida = particionar(tabla_horario_corregida, len(encabezados_horario))
 
-        tabla_horario = tuple(zip(*tabla_horario))
+        tabla_horario_corregida = tuple(zip(*tabla_horario_corregida))
         campos_tabla_datos_estudiante = ((encabezado, str) for encabezado in encabezados_datos_estudiantes)
         tabla_dat_es_clase = NamedTuple('DatosEstudiante', campos_tabla_datos_estudiante)
         tabla_datos_estudiantes_completa = tabla_dat_es_clase(*tabla_datos_estudiantes)
-        tabla_horario_completa = HorarioCompletoSiiau(*tabla_horario)
+        tabla_horario_completa = HorarioCompletoSiiau(*tabla_horario_corregida)
         datos_horarios_siiau = DatosHorarioSiiau(tabla_datos_estudiantes_completa, tabla_horario_completa)
 
         return datos_horarios_siiau
