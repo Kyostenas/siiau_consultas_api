@@ -3,8 +3,8 @@ from __future__ import annotations
 import inspect
 
 from consulta_siiau_service import SesionSIIAU, ConsultaSIIAU, HorarioCompletoSiiau
+from typing import NamedTuple, Union, Type, List
 from tabla_service import named_tuple_a_tabla
-from typing import NamedTuple, Union, Type
 from utiles import es_alguna_instancia
 from inspect import getmembers
 import datetime
@@ -141,15 +141,19 @@ def __obtener_fecha_completa(fecha: str):
         return frase
 
 
-def __procesar_un_dia(dia, hora_inicio, hora_final, horario_por_columnas: HorarioCompletoSiiau, i_actual):
-    dia.hora_inicio = hora_inicio
-    dia.hora_final = hora_final
-    dia.hora_inicio_completa = __convertir_formato_24000_a_12h(hora_inicio)
-    dia.hora_final_completa = __convertir_formato_24000_a_12h(hora_final)
-    dia.edificio = horario_por_columnas.edificio[i_actual]
-    dia.aula = horario_por_columnas.aula[i_actual]
-    dia.profesor = horario_por_columnas.profesor[i_actual]
-    dia.rango_horas = __procesar_rango_horas(hora_inicio, hora_final)
+def __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas: HorarioCompletoSiiau, i_actual):
+    datos_dia = dict()
+
+    datos_dia['hora_inicio'] = hora_inicio
+    datos_dia['hora_final'] = hora_final
+    datos_dia['hora_inicio_completa'] = __convertir_formato_24000_a_12h(hora_inicio)
+    datos_dia['hora_final_completa'] = __convertir_formato_24000_a_12h(hora_final)
+    datos_dia['edificio'] = horario_por_columnas.edificio[i_actual]
+    datos_dia['aula'] = horario_por_columnas.aula[i_actual]
+    datos_dia['profesor'] = horario_por_columnas.profesor[i_actual]
+    datos_dia['rango_horas'] = __procesar_rango_horas(hora_inicio, hora_final)
+
+    return datos_dia
 
 
 def __campos_named_tuple(named_tuple):
@@ -157,62 +161,68 @@ def __campos_named_tuple(named_tuple):
     return {member[NOMBRE_DE_MIEMBRO]: member[VALOR_DE_MIEMBRO]
             for member in getmembers(named_tuple) if member[NOMBRE_DE_MIEMBRO] in campos}
 
-def _procesar_dias_clase(horario_por_columnas: HorarioCompletoSiiau, nueva_clase: Clase, i_horario: int):
+
+def _procesar_dias_clase(datos_clase: dict, horario_por_columnas: HorarioCompletoSiiau, i_horario: int):
     hora_formato_siiau = horario_por_columnas.horario[i_horario].split('-')
     hora_inicio = hora_formato_siiau[HORA_INICIO_MATERIAS]
     hora_final = hora_formato_siiau[HORA_FINAL_MATERIAS]
     if horario_por_columnas.L[i_horario] == 'L':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_lu = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_lu'] = nuevo_dia
     else:
-        nueva_clase.dia_lu = None
+        datos_clase['dia_lu'] = None
     if horario_por_columnas.M[i_horario] == 'M':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_ma = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_ma'] = nuevo_dia
     else:
-        nueva_clase.dia_ma = None
+        datos_clase['dia_ma'] = None
     if horario_por_columnas.I[i_horario] == 'I':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_mi = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_mi'] = nuevo_dia
     else:
-        nueva_clase.dia_mi = None
+        datos_clase['dia_mi'] = None
     if horario_por_columnas.J[i_horario] == 'J':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_ju = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_ju'] = nuevo_dia
     else:
-        nueva_clase.dia_ju = None
+        datos_clase['dia_ju'] = None
     if horario_por_columnas.V[i_horario] == 'V':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_vi = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_vi'] = nuevo_dia
     else:
-        nueva_clase.dia_vi = None
+        datos_clase['dia_vi'] = None
     if horario_por_columnas.S[i_horario] == 'S':
-        nuevo_proceso_de_clase = DiaClase
-        __procesar_un_dia(nuevo_proceso_de_clase, hora_inicio, hora_final, horario_por_columnas, i_horario)
-        nueva_clase.dia_sa = DiaClase(**__campos_named_tuple(nuevo_proceso_de_clase))
+        datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
+        nuevo_dia = DiaClase(**datos_dia)
+        datos_clase['dia_sa'] = nuevo_dia
     else:
-        nueva_clase.dia_sa = None
+        datos_clase['dia_sa'] = None
 
 
-def _procesar_clase(nueva_clase: Clase, horario_por_columnas: HorarioCompletoSiiau, nrc_clase, i_datos_materia, i_horario):
+def _procesar_clase(horario_por_columnas: HorarioCompletoSiiau, nrc_clase, i_datos_materia, i_horario):
     fecha_inicio = horario_por_columnas.fecha_inicio[i_horario]
     fecha_final = horario_por_columnas.fecha_fin[i_horario]
 
-    nueva_clase.nrc = nrc_clase
-    nueva_clase.clave_materia = horario_por_columnas.clave[i_datos_materia]
-    nueva_clase.nombre = horario_por_columnas.nombre_materia[i_datos_materia]
-    nueva_clase.seccion = horario_por_columnas.seccion[i_datos_materia]
-    nueva_clase.creditos = horario_por_columnas.creditos[i_datos_materia]
-    _procesar_dias_clase(horario_por_columnas, nueva_clase, i_horario)
-    nueva_clase.fecha_inicio = fecha_inicio
-    nueva_clase.fecha_final = fecha_final
-    nueva_clase.fecha_inicio_completa = __obtener_fecha_completa(fecha_inicio)
-    nueva_clase.fecha_final_completa = __obtener_fecha_completa(fecha_final)
+    datos_clase = dict()
+
+    datos_clase['nrc'] = nrc_clase
+    datos_clase['clave_materia'] = horario_por_columnas.clave[i_datos_materia]
+    datos_clase['nombre'] = horario_por_columnas.nombre_materia[i_datos_materia]
+    datos_clase['seccion'] = horario_por_columnas.seccion[i_datos_materia]
+    datos_clase['creditos'] = horario_por_columnas.creditos[i_datos_materia]
+    _procesar_dias_clase(datos_clase, horario_por_columnas, i_horario)
+    datos_clase['fecha_inicio'] = fecha_inicio
+    datos_clase['fecha_final'] = fecha_final
+    datos_clase['fecha_inicio_completa'] = __obtener_fecha_completa(fecha_inicio)
+    datos_clase['fecha_final_completa'] = __obtener_fecha_completa(fecha_final)
+
+    return datos_clase
+
 
 def estructurar_horario_por_clases(horario_por_columnas: HorarioCompletoSiiau):
     clases = []
@@ -221,45 +231,24 @@ def estructurar_horario_por_clases(horario_por_columnas: HorarioCompletoSiiau):
     nrcs = horario_por_columnas.nrc
 
     for i_renglon, nrc_clase in enumerate(nrcs):
-        nueva_clase = Clase
         if nrc_clase != '':
-            _procesar_clase(nueva_clase, horario_por_columnas, nrc_clase, i_renglon, i_renglon)
+            datos_clase = _procesar_clase(horario_por_columnas, nrc_clase, i_renglon, i_renglon)
             ultimo_nrc = nrc_clase
             ultimo_i = i_renglon
         else:
-            _procesar_clase(nueva_clase, horario_por_columnas, ultimo_nrc, ultimo_i, i_renglon)
+            datos_clase = _procesar_clase(horario_por_columnas, ultimo_nrc, ultimo_i, i_renglon)
 
-        campos_de_clase = __campos_named_tuple(nueva_clase)
-        nueva_clase_estructurada = Clase(**campos_de_clase)
-        clases.append(nueva_clase_estructurada)
+        clases.append(Clase(**datos_clase))
 
     return clases
 
 
-def compactar_horario_por_clases(horario_por_clases):
-    pass
+def compactar_horario_por_clases(clases):
+    print(clases[0])
+    # for clase in clases:
+    #     print(clase)
 
-    # def __obtener_nombre_completo(self, indice_fila: int, materia_actual: str):
-    #     nombre = self.columnas_horario[self.i_nombre_materia][indice_fila]
-    #     if nombre == '':
-    #         nombre = materia_actual
-    #     ref_horario_compacto = self.horario[indice_fila]['referencia_horario_tabla']
-    #     nombre_completo = '\n'.join(wrap(nombre, 15) + ['', ref_horario_compacto])
-    #
-    #     return nombre_completo, nombre
-    #
-    # def __reestructurar_a_columnas(self, horario: dict):
-    #     """
-    #     Recibe: {'5:00 p.m\\n5:55p.m.': ['', 'METODOS MATEMATICOS II', '', '', '', ''], ...}
-    #     Retorna: {'HORARIO': ['5:00 p.m\\n5:55p.m.', ...], 'L': ['', ...], 'M': ['METODOS MATEMATICOS II', ...], ...}
-    #     """
-    #     horas = tuple(horario.keys())
-    #     columnas_materias_por_dia = tuple(zip(*horario.values()))
-    #     horario_reestructurado = dict(HORARIO=horas)
-    #     for i, columna_dia in enumerate(columnas_materias_por_dia):
-    #         horario_reestructurado[self.dias_cortos[i]] = columna_dia
-    #
-    #     return horario_reestructurado
+    # return None
 
 
 if __name__ == '__main__':
@@ -269,6 +258,8 @@ if __name__ == '__main__':
     carrera = env['CARRERA_Y']
     ciclo = env['CICLO_ACTUAL']
 
+
+
     sesion = SesionSIIAU(usuario, contra).obtener()
     pidm_p = sesion.pidmp
     cookies = sesion.cookies
@@ -276,8 +267,11 @@ if __name__ == '__main__':
     datos_horario = consulta.horario()
 
     horario_por_clases = estructurar_horario_por_clases(datos_horario.horario)
-    # horario_compacto = compactar_horario_por_clases(horario_por_clases)
+    # compactar_horario_por_clases(horario_por_clases)
 
+    list(map(lambda x: print(x.nombre, '\n'), horario_por_clases))
+
+    # print(horario_compacto)
 
 
 
