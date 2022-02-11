@@ -241,6 +241,19 @@ class ConsultaSIIAU(object):
                 if tabla_horario[i_dato] == '':
                     [tabla_horario.insert(i_dato + 1, '') for _ in range(ESP_FAL_SUB_MATERIA)]
         tabla_horario = particionar(tabla_horario, len(encabezados_horario))
+
+        # Correccion para cuando ultima fila es subclase (misma claes, diferente horario)
+        for fila in tabla_horario:
+            if None in fila:
+                nones = fila.count(None)
+                nueva_fila = list(fila)
+                while None in nueva_fila:
+                    nueva_fila.remove(None)
+                for esp_blanco in range(nones):
+                    nueva_fila.insert(0, '')
+                i_fila_a_reemplazar = tabla_horario.index(fila)
+                tabla_horario[i_fila_a_reemplazar] = tuple(nueva_fila)
+
         tabla_horario = tuple(zip(*tabla_horario))
         campos_tabla_datos_estudiante = ((encabezado, str) for encabezado in encabezados_datos_estudiantes)
         tabla_dat_es_clase = NamedTuple('DatosEstudiante', campos_tabla_datos_estudiante)
