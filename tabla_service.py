@@ -4,11 +4,14 @@ from os import get_terminal_size
 from tabulate import  tabulate
 from textwrap import wrap
 
+MAX_TAM_FILA = 30
+
 
 def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         subtabla=False,
                         tam_col=0,
-                        por_columnas=False):
+                        por_columnas=False,
+                        horario_compacto=False):
     tam_terminal = get_terminal_size().columns
     tam_max_tabla = tam_terminal if not subtabla else tam_col
     tupla_es_named_tuple = hasattr(tupla, '_asdict')
@@ -17,7 +20,24 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
         columnas_a_filas = list(zip(*tupla))
         cuerpo = []
         for fila in columnas_a_filas:
-            nueva_fila = tuple(map(lambda x: '\n'.join([*wrap(str(x), 15)]), fila))
+
+            # Cortar filas a un maximo tam.
+            if horario_compacto:
+                nueva_fila = list()
+                for x in fila:
+                    if '\\' in x:
+                        partes = x.split('\\')
+                        for i_parte, parte in enumerate(partes):
+                            if len(parte) > MAX_TAM_FILA:
+                                partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_FILA))
+                        nuevo_elemento = '\n'.join(partes)
+                    else:
+                        nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_FILA))
+                    nueva_fila.append(nuevo_elemento)
+                nueva_fila = tuple(nueva_fila)
+            else:
+                nueva_fila = tuple(map(lambda x: '\n'.join([*wrap(str(x), MAX_TAM_FILA)]) if '\\' not in x else x.replace('\\', '\n'), fila))
+
             cuerpo.append(nueva_fila)
         return tabulate(headers=encabezados,
                         tabular_data=cuerpo,
