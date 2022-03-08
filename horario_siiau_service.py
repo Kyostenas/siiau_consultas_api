@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from consulta_siiau_service import SesionSIIAU, ConsultaSIIAU, HorarioCompletoSiiau
+from consulta_siiau_service import SiiauEstudiante, HorarioCompletoSiiau
 from typing import NamedTuple, Union
 from tabla_service import named_tuple_a_tabla
 import datetime
@@ -345,16 +345,9 @@ if __name__ == '__main__':
     carrera = env['CARRERA_Y']
     ciclo = env['CICLO_ACTUAL']
 
-
-    sesion = SesionSIIAU(usuario, contra).obtener()
-    pidm_p = sesion.pidmp
-    cookies = sesion.cookies
-    consulta = ConsultaSIIAU(ciclo=ciclo, cookies=cookies, carrera=carrera, pidm_p=pidm_p)
-    datos_horario = consulta.horario()
-    print(named_tuple_a_tabla(datos_horario.horario, por_columnas=True))
-    horario_por_clases = estructurar_horario_por_clases(datos_horario.horario)
-    horario_compacto = compactar_horario_por_clases(horario_por_clases)
-    print(named_tuple_a_tabla(horario_compacto, por_columnas=True, horario_compacto=True))
+    siiauEst = SiiauEstudiante(usuario, contra, carrera, ciclo)
+    oferta = siiauEst.oferta('D')
+    horario = siiauEst.horario()
 
 
 
