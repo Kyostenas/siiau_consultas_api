@@ -402,7 +402,7 @@ def __obtener_cookies(resp_inicio) -> str:
 
 
 def __obtener_pidm_p(resp_inicio) -> int:
-    bienvenida = __websp_findall(resp_inicio.text, name='input')
+    bienvenida = __websp_findall(resp_inicio, name='input')
     for val in bienvenida:
         if 'p_pidm_n' in str(val):
             bienvenida = str(val)
