@@ -21,6 +21,17 @@ I_MIERCOES = 2
 I_JUEVES = 3
 I_VIERNES = 4
 I_SABADO = 5  # clases en sábado :(
+DIFERENCIA_24H = 12
+HORAS_DIA = 24
+MINUTOS_HORA = 60
+CANT_DIGS_HORA_HHMM = 4
+HORAS_DIA_HHMM = 2400
+INICO_DIA_HHMM = 0
+MEDIO_DIA_HHMM = 1200
+FINAL_DIA_HMMM = 2359
+MITAD_HORA_HHMM = 2
+
+
 
 NOMBRES_DIAS = {1: 'Lunes',  2: 'Martes',  3: 'Miércoles',
                 4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
@@ -29,6 +40,12 @@ NOMBRES_MESES = {1: 'Enero',    2: 'Febrero',    3: 'Marzo',
                  4: 'Abril',    5: 'Mayo',       6: 'Junio',
                  7: 'Julio',    8: 'Agosto',     9: 'Septiembre',
                  10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
+CLAVE_DIAS = {0: 'dia_lu',
+              1: 'dia_ma',
+              2: 'dia_mi',
+              3: 'dia_ju',
+              4: 'dia_vi',
+              5: 'dia_sa'}
 
 class DiaClase(NamedTuple):
     hora_inicio: str
@@ -88,17 +105,45 @@ def _generar_ref_clase(seccion: str, edificio: str, aula: str):
 
 def __convertir_formato_24000_a_12h(hora: str):
         """
-        Recibe hora en formato hhmm y retorna hh:mm f.f
+        Recibe hora en formato hhmm y retorna hh:mm f.f.
         Ejemplo: '0800'  ->  '8:00 a.m.'
 
-        Si la hora cae fuera del rango 7:00 - 21:55, retorna None
+        El formato siempre debe ser "hhmm" y caber en la medicion
+        normal de la hora, en caso contrario no se acepta.
+        correcto: 1555
+        correcto: 0015
+        correcto: 2359
+        incorrecto: 66
+        incorrecto: 1090
+        incorrecto: 4515
+        incorrecto: -1055
         """
         hora_entera = int(hora)
-        if 699 < hora_entera < 1300:  # 7:00 a.m. - 12:59 a.m.
-            hora_con_formato = f'{hora[:2]}:{hora[2:]} {FORMATO_MATUTINO}'
-        elif 1259 < hora_entera < 2200:  # 1:00 p.m - 9:59 p.m.
-            hora_restada = int(hora[:2]) - 12
-            hora_con_formato = f'{hora_restada}:{hora[2:]} {FORMATO_VESPERTINO}'
+        try:
+            hora_in_entera = int(hora[:MITAD_HORA_HHMM])
+        except ValueError:
+            hora_in_entera = 0
+        try:
+            hora_fin_entera = int(hora[MITAD_HORA_HHMM:])
+        except ValueError:
+            hora_fin_entera = 0
+        para_restar = (DIFERENCIA_24H if hora_in_entera > DIFERENCIA_24H else 0)
+    
+        if hora_entera < INICO_DIA_HHMM:
+            return None
+        if hora_in_entera > HORAS_DIA:
+            return None
+        if hora_fin_entera > MINUTOS_HORA:
+            return None
+        if len(hora) != CANT_DIGS_HORA_HHMM: 
+            return None
+        if hora_entera >= HORAS_DIA_HHMM:  # Por si acaso las 12 se manejaran como 24 en lugar de 0
+            hora_in_entera = INICO_DIA_HHMM
+        if INICO_DIA_HHMM < hora_entera < MEDIO_DIA_HHMM:  # 12:00 a.m. - 12:59 a.m.
+            hora_con_formato = f'{hora_in_entera:02d}:{hora_fin_entera:02d} {FORMATO_MATUTINO}'
+        elif MEDIO_DIA_HHMM - 1 < hora_entera < FINAL_DIA_HMMM:  # 1:00 p.m - 11:59 a.m.
+            hora_restada = hora_in_entera - para_restar
+            hora_con_formato = f'{hora_restada:02d}:{hora_fin_entera:02d} {FORMATO_VESPERTINO}'
         else:
             return None
 
@@ -172,37 +217,37 @@ def _procesar_dias_clase(datos_clase: dict, horario_por_columnas: HorarioComplet
     hora_formato_siiau = horario_por_columnas.horario[i_horario].split('-')
     hora_inicio = hora_formato_siiau[HORA_INICIO_MATERIAS]
     hora_final = hora_formato_siiau[HORA_FINAL_MATERIAS]
-    if horario_por_columnas.L[i_horario] == 'L':
+    if horario_por_columnas.L[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_lu'] = nuevo_dia
     else:
         datos_clase['dia_lu'] = None
-    if horario_por_columnas.M[i_horario] == 'M':
+    if horario_por_columnas.M[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_ma'] = nuevo_dia
     else:
         datos_clase['dia_ma'] = None
-    if horario_por_columnas.I[i_horario] == 'I':
+    if horario_por_columnas.I[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_mi'] = nuevo_dia
     else:
         datos_clase['dia_mi'] = None
-    if horario_por_columnas.J[i_horario] == 'J':
+    if horario_por_columnas.J[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_ju'] = nuevo_dia
     else:
         datos_clase['dia_ju'] = None
-    if horario_por_columnas.V[i_horario] == 'V':
+    if horario_por_columnas.V[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_vi'] = nuevo_dia
     else:
         datos_clase['dia_vi'] = None
-    if horario_por_columnas.S[i_horario] == 'S':
+    if horario_por_columnas.S[i_horario]:
         datos_dia = __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas, i_horario)
         nuevo_dia = DiaClase(**datos_dia)
         datos_clase['dia_sa'] = nuevo_dia
@@ -245,7 +290,9 @@ def estructurar_horario_por_clases(horario_por_columnas: HorarioCompletoSiiau):
             datos_clase = _procesar_clase(horario_por_columnas, ultimo_nrc, ultimo_i, i_renglon)
 
         clases.append(Clase(**datos_clase))
-
+    
+    clases = tuple(clases)
+    
     return clases
 
 
@@ -320,7 +367,7 @@ def compactar_horario_por_clases(clases):
                                      I_VIERNES)
         if clase.dia_sa is not None:
             _agregar_horas_y_nombres(horario_por_horas,
-                                     clase.dia_sa,
+                                     clase.dia_sa,|
                                      clase.nombre,
                                      clase.dia_sa.edificio,
                                      clase.dia_sa.aula,
@@ -328,7 +375,7 @@ def compactar_horario_por_clases(clases):
                                      clase.seccion,
                                      I_SABADO)
 
-    horario_por_horas_ordenado = dict(sorted(horario_por_horas.items()))
+    horario_por_horas_ordenado = dict(sorted(horario_por_horas.items()))  # FIX Horario no se ordena por horas correctamente
 
     horas = list(horario_por_horas_ordenado.keys())
     clases_compactas_por_filas = list(horario_por_horas_ordenado.values())
@@ -346,9 +393,14 @@ if __name__ == '__main__':
     ciclo = env['CICLO_ACTUAL']
 
     siiauEst = SiiauEstudiante(usuario, contra, carrera, ciclo)
-    oferta = siiauEst.oferta('D')
+    oferta = siiauEst.oferta(centro='D', ciclo=ciclo, materia='I7024', con_cupos=True)
     horario = siiauEst.horario()
+    horario_compacto = compactar_horario_por_clases(estructurar_horario_por_clases(horario.horario))
+    # carreras = siiauEst.carreras()
 
+    # print(horario_compacto)    
+    print(named_tuple_a_tabla(horario_compacto, por_columnas=True, horario_compacto=True))
+    # print(named_tuple_a_tabla(oferta))
 
 
 

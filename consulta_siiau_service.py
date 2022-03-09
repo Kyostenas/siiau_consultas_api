@@ -37,6 +37,7 @@ I_HORARIO_MATERIA_OFERTA = 8
 I_PROFESORES_MATERIA_OFERTA = 7
 ANCHO_TABLA_PROFES_OFERTA = 2
 I_DIAS_HORARIOS_OFERTA = 2
+RANGO_DIAS_HORARIO_COLUMNAS = slice(6, 12)
 
 
 class RefererSession(Session):
@@ -141,8 +142,13 @@ def _horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorari
                 [tabla_horario_corregida.append('') for _ in range(ESP_FAL_SUB_CLASE)]
         tabla_horario_corregida.append(dato)
     tabla_horario_corregida = particionar(tabla_horario_corregida, len(encabezados_horario))
+    tabla_horario_corregida = list(zip(*tabla_horario_corregida))  # Se convierte a columnas
 
-    tabla_horario_corregida = tuple(zip(*tabla_horario_corregida))
+    for i_columna, columna in enumerate(tabla_horario_corregida[RANGO_DIAS_HORARIO_COLUMNAS]):
+        i_columna_nueva = RANGO_DIAS_HORARIO_COLUMNAS.start + i_columna
+        nueva_columna_de_dias = tuple([False if dia == '' else True for dia in columna])
+        tabla_horario_corregida[i_columna_nueva] = nueva_columna_de_dias
+
     campos_tabla_datos_estudiante = ((encabezado, str) for encabezado in encabezados_datos_estudiantes)
     tabla_dat_es_clase = NamedTuple('DatosEstudiante', campos_tabla_datos_estudiante)
     tabla_datos_estudiantes_completa = tabla_dat_es_clase(*tabla_datos_estudiantes)

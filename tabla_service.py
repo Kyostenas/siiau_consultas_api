@@ -4,7 +4,7 @@ from os import get_terminal_size
 from tabulate import  tabulate
 from textwrap import wrap
 
-MAX_TAM_FILA = 30
+MAX_TAM_FILA = 15
 
 # TODO mejorar para que pueda recibir tam desado de columnas
 # FIX para horario compacto requiere que "por_columnas" y "horario_compacto" sean verdaderas 
@@ -47,8 +47,16 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                     nueva_fila.append(nuevo_elemento)
                 nueva_fila = tuple(nueva_fila)
             else:
-                nueva_fila = tuple(map(lambda x: '\n'.join([*wrap(str(x), MAX_TAM_FILA)]) if '\\' not in x else x.replace('\\', '\n'), fila))
-
+                nueva_fila = []
+                for col in fila:
+                    if isinstance(col, bool):
+                        col = 'si' if col else ''
+                    if '\\' in col:
+                        col = col.replace('\\', '\n')
+                    else:
+                        col = '\n'.join([*wrap(col, MAX_TAM_FILA)])
+                    nueva_fila.append(col)
+                nueva_fila = tuple(nueva_fila)
             cuerpo.append(nueva_fila)
         return tabulate(headers=encabezados,
                         tabular_data=cuerpo,
@@ -66,7 +74,7 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                     nueva_fila.append(n_sub_tabla)
                 else:
                     if isinstance(col, bool):
-                        col = 'si' if col else 'no'
+                        col = 'si' if col else ''
                     nueva_fila.append('\n'.join([*wrap(str(col), 15)]))
             cuerpo.append(nueva_fila)
         formato = 'grid' if not subtabla else 'simple'
@@ -79,7 +87,7 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
         cuerpo = []
         for col in tupla:
             if isinstance(col, bool):
-                col = 'si' if col else 'no'
+                col = 'si' if col else ''
             cuerpo.append(col)
         return tabulate(tabular_data=[cuerpo],
                         headers=encabezados,
