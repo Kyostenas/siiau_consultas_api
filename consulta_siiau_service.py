@@ -1,7 +1,7 @@
 import requests.exceptions
 
 from utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_lista
-from clases_esquema import (DatosHorarioSiiau, DatosSesion, HorarioCompletoSiiau, CarreraEstudiante,
+from esquemas import (DatosHorarioSiiau, DatosSesion, HorarioCompletoSiiau, CarreraEstudiante,
                             ClaseCompleta, CarreraCompleta, ClaseOferta, HorarioOferta, ProfesorOferta,
                             CentroCompleto, DiasHorarioOferta, CicloCompleto)
 from typing import NamedTuple, Tuple, List, Union
@@ -394,7 +394,7 @@ def materias(self, id_carrera: str) -> Tuple[ClaseCompleta]:
 
 
 def __obtener_cookies(resp_inicio) -> str:
-    masa = resp_inicio.cookies.get_dict(URL_SIIAU_ESTUDIANTE)
+    masa = resp_inicio.cookies.get_dict()
     horneado = [f'{nom}={val}' for nom, val in masa.items()]
     cookies = ';'.join(horneado)
 
