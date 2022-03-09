@@ -6,6 +6,17 @@ from textwrap import wrap
 
 MAX_TAM_FILA = 30
 
+# TODO mejorar para que pueda recibir tam desado de columnas
+# FIX para horario compacto requiere que "por_columnas" y "horario_compacto" sean verdaderas 
+# FIX tabla de oferta no se forma con ofertas muy grandes, pudiendo ser materias en especifico
+# Traceback (most recent call last):
+#   File "horario_siiau_service.py", line 355, in <module>
+#     oferta_tabla = named_tuple_a_tabla(tupla=oferta, por_columnas=True)
+#   File "/home/mentalselfthink/siiau_consultas_workspace/siiau_consultas_api/tabla_service.py", line 55, in named_tuple_a_tabla
+#     n_sub_tabla = named_tuple_a_tabla(col, subtabla=True, tam_col= 10)
+#   File "/home/mentalselfthink/siiau_consultas_workspace/siiau_consultas_api/tabla_service.py", line 48, in named_tuple_a_tabla
+#     encabezados = tuple(map(lambda x: ' '.join(x.upper().split('_')), tupla[0]._asdict().keys()))
+# IndexError: tuple index out of range
 
 def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         subtabla=False,
