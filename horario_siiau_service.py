@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from consulta_siiau_service import SiiauEstudiante, HorarioCompletoSiiau
-from typing import NamedTuple, Union
 from tabla_service import named_tuple_a_tabla
+from typing import NamedTuple, Union
+from utiles import aplanar_lista
 import datetime
 
 CORRECCION_RANGO_HORAS = 5
@@ -14,6 +15,8 @@ HORA_FINAL_MATERIAS = 1
 NOMBRE_DE_MIEMBRO = 0
 VALOR_DE_MIEMBRO = 1
 SEP = '\\'
+SEP_DAT_MAT = '-'
+INDIC_DAT_MAT = '>'
 MATERIA_SIN_HORARIO = 'Sin Hora'
 I_LUNES = 0
 I_MARTES = 1
@@ -30,6 +33,7 @@ INICO_DIA_HHMM = 0
 MEDIO_DIA_HHMM = 1200
 FINAL_DIA_HMMM = 2359
 MITAD_HORA_HHMM = 2
+MITAD_HORA_RANGO_HHMM = 0
 
 
 
@@ -56,6 +60,7 @@ class DiaClase(NamedTuple):
     edificio: str
     aula: str
     rango_horas: tuple
+    rango_horas_hhmm: tuple
 
 
 class Clase(NamedTuple):
@@ -87,7 +92,7 @@ class HorarioCompacto(NamedTuple):
     sabado: list
 
 
-def _rango_horas(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
+def __rango_horas(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
     """
     Recibe inicio=1700, fin=1855, paso=100
     Retorna generador que crea: (('1700, '1755'), ('1800', '1855))
@@ -169,20 +174,22 @@ def __procesar_rango_horas(inicio: str, final: str):
     Ejemplo: '1700-2055'  ->  ['5:00 p.m.\\n 5:55 p.m.', '6:00 p.m.\\n 6:55 p.m.',
     '7:00 p.m.\\n 7:55 p.m.', '8:00 p.m.\\n 8:55 p.m.']
 
-    Ejemplo: '0011-0011'  ->  'Sin\\nhora'
+    Ejemplo: '66'  ->  'Sin\\nhora'
+    Ejemplo: '11'  ->  'Sin\\nhora'
+    Ejemplo: '5065-4012'  ->  'Sin\\nhora'
     """
     mitades_de_hora = [inicio, final]
-    horas_de_clase = _rango_horas(*map(int, mitades_de_hora), 100)
-    horas_de_clase_formateadas = []
-    for horas_de_un_espacio in horas_de_clase:
+    rango_horas_clase = __rango_horas(*map(int, mitades_de_hora), 100)
+    rango_horas_de_clase_formateadas = []
+    for horas_de_un_espacio in rango_horas_clase:
         horas_de_un_espacio_formateadas = __formatear_hora(horas_de_un_espacio)
         if horas_de_un_espacio_formateadas is None:
-            horas_de_clase_formateadas.append(MATERIA_SIN_HORARIO)
+            rango_horas_de_clase_formateadas.append(MATERIA_SIN_HORARIO)
         else:
-            horas_de_clase_formateadas.append(horas_de_un_espacio_formateadas)
-    horas_de_clase_formateadas = tuple(horas_de_clase_formateadas)
+            rango_horas_de_clase_formateadas.append(horas_de_un_espacio_formateadas)
+    rango_horas_de_clase_formateadas = tuple(rango_horas_de_clase_formateadas)
 
-    return horas_de_clase_formateadas
+    return rango_horas_de_clase_formateadas
 
 
 def __obtener_fecha_completa(fecha: str):
@@ -209,6 +216,7 @@ def __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas: HorarioComp
     datos_dia['aula'] = horario_por_columnas.aula[i_actual]
     datos_dia['profesor'] = horario_por_columnas.profesor[i_actual]
     datos_dia['rango_horas'] = __procesar_rango_horas(hora_inicio, hora_final)
+    datos_dia['rango_horas_hhmm'] =  __rango_horas(int(hora_inicio), int(hora_final), paso=100)
 
     return datos_dia
 
@@ -288,9 +296,7 @@ def estructurar_horario_por_clases(horario_por_columnas: HorarioCompletoSiiau):
             ultimo_i = i_renglon
         else:
             datos_clase = _procesar_clase(horario_por_columnas, ultimo_nrc, ultimo_i, i_renglon)
-
         clases.append(Clase(**datos_clase))
-    
     clases = tuple(clases)
     
     return clases
@@ -303,17 +309,41 @@ def _agregar_horas_y_nombres(h_por_horas: dict,
                              aula_clase: str,
                              clave_clase: str,
                              seccion_clase: str,
+                             nrc_clase,
                              i_dia):
-    for hora_clase in dia.rango_horas:
+    rango_horas_hmm = tuple(dia.rango_horas_hhmm)
+    for i_hora_clase, hora_clase in enumerate(dia.rango_horas):
+        # hora en formato 1555 en entero para ordenar las clases
+        # de modo que arriba quede la hora menor (mas temprano)
+        # y abajo la mayor (mas tarde)
+        # 1000 : {'10:00 a.m.\\10:55 a.m.: ...}
+        # 1100 : {'11:00 a.m.\\11:55 a.m.: ...}
+        # . . .
+        hora_entera_hhmm = int(rango_horas_hmm[i_hora_clase][MITAD_HORA_RANGO_HHMM])  
         try:
-            h_por_horas[hora_clase][i_dia] = ''.join([nombre_clase, SEP, SEP, edificio_clase, ' ', aula_clase,
-                                                       SEP, clave_clase, ' ', seccion_clase])
+            # METODOS MATEMATICOS  --> nombre
+            # 
+            # >DEDR-A001           --> edificio - aula
+            # >I5896-D17           --> clave    - seccion
+            # >57302-              --> nrc      -
+            h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = ''.join([
+                nombre_clase, SEP, SEP, 
+                INDIC_DAT_MAT, edificio_clase, SEP_DAT_MAT, aula_clase, SEP, 
+                INDIC_DAT_MAT, clave_clase, SEP_DAT_MAT, seccion_clase, SEP, 
+                INDIC_DAT_MAT, nrc_clase, SEP_DAT_MAT
+                ])
         except KeyError:
             # Si no existe la fila de esa hora, agregarla
-            h_por_horas[hora_clase] = ['', '', '', '', '', '']  # cada cadena vacia es un día
-            h_por_horas[hora_clase][i_dia] = ''.join([nombre_clase, SEP, SEP, edificio_clase, ' ', aula_clase,
-                                                       SEP, clave_clase, ' ', seccion_clase])
-
+            nuevo_interno = dict()
+            nuevo_interno[hora_clase] = ['', '', '', '', '', '']  # cada cadena vacia es un día
+            h_por_horas[hora_entera_hhmm] = nuevo_interno
+            h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = ''.join([
+                nombre_clase, SEP, SEP, 
+                INDIC_DAT_MAT, edificio_clase, SEP_DAT_MAT, aula_clase, SEP, 
+                INDIC_DAT_MAT, clave_clase, SEP_DAT_MAT, seccion_clase, SEP, 
+                INDIC_DAT_MAT, nrc_clase, SEP_DAT_MAT
+                ])
+    
 
 def compactar_horario_por_clases(clases):
 
@@ -328,6 +358,7 @@ def compactar_horario_por_clases(clases):
                                      clase.dia_lu.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_LUNES)
         if clase.dia_ma is not None:
             _agregar_horas_y_nombres(horario_por_horas,
@@ -337,6 +368,7 @@ def compactar_horario_por_clases(clases):
                                      clase.dia_ma.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_MARTES)
         if clase.dia_mi is not None:
             _agregar_horas_y_nombres(horario_por_horas,
@@ -346,6 +378,7 @@ def compactar_horario_por_clases(clases):
                                      clase.dia_mi.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_MIERCOES)
         if clase.dia_ju is not None:
             _agregar_horas_y_nombres(horario_por_horas,
@@ -355,6 +388,7 @@ def compactar_horario_por_clases(clases):
                                      clase.dia_ju.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_JUEVES)
         if clase.dia_vi is not None:
             _agregar_horas_y_nombres(horario_por_horas,
@@ -364,21 +398,23 @@ def compactar_horario_por_clases(clases):
                                      clase.dia_vi.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_VIERNES)
         if clase.dia_sa is not None:
             _agregar_horas_y_nombres(horario_por_horas,
-                                     clase.dia_sa,|
+                                     clase.dia_sa,
                                      clase.nombre,
                                      clase.dia_sa.edificio,
                                      clase.dia_sa.aula,
                                      clase.clave_materia,
                                      clase.seccion,
+                                     clase.nrc,
                                      I_SABADO)
 
-    horario_por_horas_ordenado = dict(sorted(horario_por_horas.items()))  # FIX Horario no se ordena por horas correctamente
-
-    horas = list(horario_por_horas_ordenado.keys())
-    clases_compactas_por_filas = list(horario_por_horas_ordenado.values())
+    horario_por_horas_ordenado = dict(sorted(horario_por_horas.items()))
+    horas = [list(fila.keys()) for h_entera, fila in horario_por_horas_ordenado.items()]
+    horas = aplanar_lista(horas)
+    clases_compactas_por_filas = map(lambda x: aplanar_lista(list(x.values())), list(horario_por_horas_ordenado.values()))
     clases_compactas_por_columna = list(zip(*clases_compactas_por_filas))
     horario_compactado = HorarioCompacto(horas, *clases_compactas_por_columna)
 
