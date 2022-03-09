@@ -7,6 +7,8 @@ from textwrap import wrap
 MAX_TAM_FILA = 15
 
 # TODO mejorar para que pueda recibir tam desado de columnas
+# TODO separar named_tuple_a_tabla en funciones mas legibles
+
 # FIX para horario compacto requiere que "por_columnas" y "horario_compacto" sean verdaderas 
 # FIX tabla de oferta no se forma con ofertas muy grandes, pudiendo ser materias en especifico
 # Traceback (most recent call last):
@@ -17,6 +19,8 @@ MAX_TAM_FILA = 15
 #   File "/home/mentalselfthink/siiau_consultas_workspace/siiau_consultas_api/tabla_service.py", line 48, in named_tuple_a_tabla
 #     encabezados = tuple(map(lambda x: ' '.join(x.upper().split('_')), tupla[0]._asdict().keys()))
 # IndexError: tuple index out of range
+
+
 
 def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         subtabla=False,
@@ -38,9 +42,34 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                 for x in fila:
                     if '\\' in x:
                         partes = x.split('\\')
+                        formar_sub_tabla_informativa = False
+                        cuerpo_sub_tabla_informativa = []
+                        indice_para_insertar = 0
                         for i_parte, parte in enumerate(partes):
+                            if '>' in parte:
+                                parte = parte.replace('>', '')
+                                if not formar_sub_tabla_informativa:
+                                    formar_sub_tabla_informativa = True
+                                if indice_para_insertar == 0:
+                                    indice_para_insertar = i_parte
+                                partes_de_la_parte = parte.split('-')
+                                cuerpo_sub_tabla_informativa.append(partes_de_la_parte)
                             if len(parte) > MAX_TAM_FILA:
                                 partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_FILA))
+                        if formar_sub_tabla_informativa:
+                            i_parte = 0
+                            while i_parte < len(partes) + 1:
+                                try:
+                                    if '>' in partes[i_parte]:
+                                        partes.pop(i_parte)
+                                        i_parte = 0
+                                    else:
+                                        i_parte += 1
+                                except IndexError:
+                                    i_parte += 1
+                            subtabla_informativa = tabulate(tabular_data=cuerpo_sub_tabla_informativa,
+                                                            tablefmt='presto')
+                            partes.append(subtabla_informativa)
                         nuevo_elemento = '\n'.join(partes)
                     else:
                         nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_FILA))
