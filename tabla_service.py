@@ -8,6 +8,7 @@ MAX_TAM_FILA = 15
 
 # TODO mejorar para que pueda recibir tam desado de columnas
 # TODO separar named_tuple_a_tabla en funciones mas legibles
+# TODO agregar calculo personalizable del tam de las filas
 
 # FIX para horario compacto requiere que "por_columnas" y "horario_compacto" sean verdaderas 
 # FIX tabla de oferta no se forma con ofertas muy grandes, pudiendo ser materias en especifico
@@ -52,7 +53,7 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                                     formar_sub_tabla_informativa = True
                                 if indice_para_insertar == 0:
                                     indice_para_insertar = i_parte
-                                partes_de_la_parte = parte.split('-')
+                                partes_de_la_parte = parte.split('%')
                                 cuerpo_sub_tabla_informativa.append(partes_de_la_parte)
                             if len(parte) > MAX_TAM_FILA:
                                 partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_FILA))

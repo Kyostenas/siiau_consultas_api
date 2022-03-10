@@ -95,7 +95,7 @@ def __preparar_para_busqueda(cadena: str) -> str:
     return minusculas
 
 
-def _horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorarioSiiau:
+def horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorarioSiiau:
     url_horario = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/sfpcoal.horario'])
     payload = dict(pidmP=pidm_p,
                    cicloP=ciclo,
@@ -157,8 +157,8 @@ def _horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorari
 
     return datos_horarios_siiau
 
-
-def _carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
+# FIX no siempre hay opciones con las carreras del estudiante
+def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
     url_carrera = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/gupmenug.menu'])
     payload = dict(p_sistema_c='ALUMNOS',
                    p_sistemaid_n='3',
@@ -305,7 +305,7 @@ def ciclos_por_busqueda(busqueda: str) -> Tuple[CicloCompleto]:
     return empacados
 
 
-def centros(self) -> Tuple[CentroCompleto]:
+def centros() -> Tuple[CentroCompleto]:
     url_centros = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/sgpofer.secciones'])
     payload = dict(pidmp='',
                    majrp='')
@@ -419,7 +419,7 @@ def __obtener_pidm_p(resp_inicio) -> int:
     return pidm_p
 
 
-def _obtener_sesion(codigo, clave, carrera, ciclo):
+def obtener_sesion(codigo, clave, carrera, ciclo):
     url_inicio = ''.join([URL_SIIAU_ESTUDIANTE, '/wus/gupprincipal.valida_inicio'])
     data = dict(p_codigo_c=codigo,
                 p_clave_c=clave)
@@ -437,18 +437,18 @@ def _obtener_sesion(codigo, clave, carrera, ciclo):
         raise ConnectionError('No se pudo iniciar sesion en siiau')
 
 
-class SiiauEstudiante:
+class Siiau:
 
     def __init__(self, codigo, clave, carrera, ciclo):
-        self.sesion: DatosSesion = _obtener_sesion(codigo, clave, carrera, ciclo)
+        self.sesion: DatosSesion = obtener_sesion(codigo, clave, carrera, ciclo)
 
     def horario(self) -> DatosHorarioSiiau:
         cookies, pidm_p, ciclo, carrera = self.sesion
-        return _horario(pidm_p, ciclo, carrera, cookies)
+        return horario(pidm_p, ciclo, carrera, cookies)
 
     def carreras(self) -> Tuple[CarreraEstudiante]:
         cookies, pidm_p, _, __ = self.sesion
-        return _carrera_s_estudiante(pidm_p, cookies)
+        return carrera_s_estudiante(pidm_p, cookies)
 
     def oferta(self, centro='', ciclo='', materia='', con_cupos=False) -> Tuple[ClaseOferta]:
         if ciclo == '':
@@ -457,5 +457,5 @@ class SiiauEstudiante:
 
 
 if __name__ == '__main__':
-    print('Esto no se debería mostrar...')
+    print('Esto no se deberia mostrar. Ejecutando consulta_siiau_service.')
 
