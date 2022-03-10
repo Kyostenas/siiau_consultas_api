@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from consulta_siiau_service import SiiauEstudiante, HorarioCompletoSiiau
-from tabla_service import named_tuple_a_tabla
+from consulta_siiau_service import HorarioCompletoSiiau
 from typing import NamedTuple, Union
 from utiles import aplanar_lista
 import datetime
@@ -15,7 +14,7 @@ HORA_FINAL_MATERIAS = 1
 NOMBRE_DE_MIEMBRO = 0
 VALOR_DE_MIEMBRO = 1
 SEP = '\\'
-SEP_DAT_MAT = '-'
+SEP_DAT_MAT = '%'
 INDIC_DAT_MAT = '>'
 MATERIA_SIN_HORARIO = 'Sin Hora'
 I_LUNES = 0
@@ -422,21 +421,7 @@ def compactar_horario_por_clases(clases):
 
 
 if __name__ == '__main__':
-    from os import environ as env
-    usuario = env['USUARIO_Y']
-    contra = env['CONTRA_Y']
-    carrera = env['CARRERA_Y']
-    ciclo = env['CICLO_ACTUAL']
-
-    siiauEst = SiiauEstudiante(usuario, contra, carrera, ciclo)
-    oferta = siiauEst.oferta(centro='D', ciclo=ciclo, materia='I7024', con_cupos=True)
-    horario = siiauEst.horario()
-    horario_compacto = compactar_horario_por_clases(estructurar_horario_por_clases(horario.horario))
-    # carreras = siiauEst.carreras()
-
-    # print(horario_compacto)    
-    print(named_tuple_a_tabla(horario_compacto, por_columnas=True, horario_compacto=True))
-    # print(named_tuple_a_tabla(oferta))
+    print('Esto no deberia mostrarse. Ejecutando desde horario_siiau_service.')
 
 
 
