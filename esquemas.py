@@ -1,4 +1,4 @@
-from typing import NamedTuple, Tuple, List
+from typing import NamedTuple, Tuple, Union
 
 
 class DatosSesion(NamedTuple):
@@ -106,3 +106,44 @@ class CarreraEstudiante(NamedTuple):
     ref_carrera: str
     ciclo_inicio: str
     ref_ciclo: int
+
+
+class DiaClase(NamedTuple):
+    hora_inicio: str
+    hora_final: str
+    hora_inicio_completa: str
+    hora_final_completa: str
+    profesor: str
+    edificio: str
+    aula: str
+    rango_horas: tuple
+    rango_horas_hhmm: tuple
+
+
+class Clase(NamedTuple):
+    nrc: str
+    clave_materia: str
+    nombre: str
+    seccion: str
+    creditos: int
+    dia_lu: Union[DiaClase, None]
+    dia_ma: Union[DiaClase, None]
+    dia_mi: Union[DiaClase, None]
+    dia_ju: Union[DiaClase, None]
+    dia_vi: Union[DiaClase, None]
+    dia_sa: Union[DiaClase, None]
+    fecha_inicio: str
+    fecha_final: str
+    fecha_inicio_completa: str
+    fecha_final_completa: str
+    # referencia_horario_tabla: dict
+
+
+class HorarioCompacto(NamedTuple):
+    horas: list
+    lunes: list
+    martes: list
+    miercoles: list
+    jueves: list
+    viernes: list
+    sabado: list
