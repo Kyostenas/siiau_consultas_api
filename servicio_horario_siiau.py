@@ -53,7 +53,7 @@ CLAVE_DIAS = {0: 'dia_lu',
 
 
 
-def __rango_horas(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
+def __rango_horas_hhmm(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
     """
     Recibe inicio=1700, fin=1855, paso=100
     Retorna generador que crea: (('1700, '1755'), ('1800', '1855))
@@ -140,7 +140,7 @@ def __procesar_rango_horas(inicio: str, final: str):
     Ejemplo: '5065-4012'  ->  'Sin\\nhora'
     """
     mitades_de_hora = [inicio, final]
-    rango_horas_clase = __rango_horas(*map(int, mitades_de_hora), 100)
+    rango_horas_clase = __rango_horas_hhmm(*map(int, mitades_de_hora), 100)
     rango_horas_de_clase_formateadas = []
     for horas_de_un_espacio in rango_horas_clase:
         horas_de_un_espacio_formateadas = __formatear_hora(horas_de_un_espacio)
@@ -177,7 +177,7 @@ def __procesar_un_dia(hora_inicio, hora_final, horario_por_columnas: HorarioComp
     datos_dia['aula'] = horario_por_columnas.aula[i_actual]
     datos_dia['profesor'] = horario_por_columnas.profesor[i_actual]
     datos_dia['rango_horas'] = __procesar_rango_horas(hora_inicio, hora_final)
-    datos_dia['rango_horas_hhmm'] =  __rango_horas(int(hora_inicio), int(hora_final), paso=100)
+    datos_dia['rango_horas_hhmm'] =  __rango_horas_hhmm(int(hora_inicio), int(hora_final), paso=100)
 
     return datos_dia
 
@@ -280,7 +280,7 @@ def _agregar_horas_y_nombres(h_por_horas: dict,
         # 1000 : {'10:00 a.m.\\10:55 a.m.: ...}
         # 1100 : {'11:00 a.m.\\11:55 a.m.: ...}
         # . . .
-        hora_entera_hhmm = int(rango_horas_hmm[i_hora_clase][MITAD_HORA_RANGO_HHMM])  
+        hora_entera_hhmm = int(rango_horas_hmm[i_hora_clase][MITAD_HORA_RANGO_HHMM])
         try:
             # METODOS MATEMATICOS  --> nombre
             # 
