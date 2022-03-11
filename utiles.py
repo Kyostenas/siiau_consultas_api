@@ -7,6 +7,7 @@ para suplirla.
 """
 
 import re, io, json, xlwt, os
+from typing import AnyStr
 from xlwt import Workbook
 import datetime
 
@@ -16,7 +17,7 @@ VALORES_CICLOS = {
 }
 
 
-def convertir_ciclo_a_entero(ciclo: str):
+def convertir_ciclo_a_entero(ciclo: str) -> int:
     """
     Convierte el ciclo a entero considerando las posibles letras
     que contenga como minusculas y conviertiendolas a su valor entero.
@@ -36,7 +37,7 @@ def convertir_ciclo_a_entero(ciclo: str):
     return int(''.join([entero, letra]))
 
 
-def aplanar_lista(tf, i=0, c=0):
+def aplanar_lista(tf, i=0, c=0) -> list:
     c += 1
     if i < len(tf):
         if isinstance(tf[i], list):
@@ -50,7 +51,7 @@ def aplanar_lista(tf, i=0, c=0):
         return tf
 
 
-def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True):
+def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True) -> list:
     """
     Particionar una lista en rebanadas del largo deseado.
     """
@@ -66,7 +67,7 @@ def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True):
         return listas
 
 
-def particion_arbitraria(lista, *partes, join_string=False):
+def particion_arbitraria(lista, *partes, join_string=False) -> list:
     """ 
     Particionar una lista, pero indicar el tamaño de cada
     particion manualmente.
@@ -93,13 +94,13 @@ def limpiar_html(html):
     return re.sub(limpiador, '', str(html))
 
 
-def escribir_txt(texto, dirArchivo):
+def escribir_txt(texto, dirArchivo) -> None:
     with io.open(dirArchivo, 'a', encoding='utf-8') as arcTexto:
         arcTexto.write(texto)
     arcTexto.close()
 
 
-def escribir_json(datos, dir_archivo):
+def escribir_json(datos, dir_archivo) -> None:
     directorio_activo = os.getcwd()
     dir_archivo = f'{os.sep}'.join([directorio_activo, dir_archivo])
     with open(dir_archivo, 'w', encoding='utf-8') as arcJson:
@@ -107,7 +108,7 @@ def escribir_json(datos, dir_archivo):
     arcJson.close()
 
 
-def escribir_excel(dir_archivo, *celsNegritas, **tablas):
+def escribir_excel(dir_archivo, *celsNegritas, **tablas) -> None:
     wb = Workbook()
     negrita = xlwt.easyxf('font: bold 1')
     directorio_activo = os.getcwd()
@@ -125,7 +126,7 @@ def escribir_excel(dir_archivo, *celsNegritas, **tablas):
     wb.save(f'{dir_archivo}')
 
 
-def mk_dir_en_dir_actual(*dirCarpeta):
+def mk_dir_en_dir_actual(*dirCarpeta) -> None:
     directorio_activo = os.getcwd()
     nueva_carpeta = f'{os.sep}'.join([directorio_activo] + list(dirCarpeta))
     try:
@@ -134,7 +135,7 @@ def mk_dir_en_dir_actual(*dirCarpeta):
         pass
 
 
-def cadena_fecha_larga(incluirHora=True, separadorFecha='', separadorHora=''):
+def cadena_fecha_larga(incluirHora=True, separadorFecha='', separadorHora='') -> str:
     def evaluar(num):
         extra = ''
         if num < 10:
@@ -160,7 +161,7 @@ def cadena_fecha_larga(incluirHora=True, separadorFecha='', separadorHora=''):
         return fecha_completa
 
 
-def es_alguna_instancia(a_comprobar, *instancia_de):
+def es_alguna_instancia(a_comprobar, *instancia_de) -> bool:
     """
     Comprobar si el valor ingresado es instancia de cualquiera de los tipos
     solicitados, al menos uno de ellos.
@@ -170,3 +171,14 @@ def es_alguna_instancia(a_comprobar, *instancia_de):
         es_instancia = es_instancia or isinstance(a_comprobar, comprobacion)
 
     return es_instancia
+
+
+def simplificar_lista(lista: list) -> list:
+    """
+    Revisa una lista y elimina todos los elementos repetidos en ella.
+    Retorna la lista revisada.
+    """
+    revisada = []
+    [revisada.append(elemento) for elemento in lista if elemento not in revisada]
+
+    return revisada
