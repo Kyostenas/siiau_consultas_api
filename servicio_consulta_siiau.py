@@ -197,7 +197,7 @@ def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
     return carreras_formateadas
 
 
-def oferta(centro, ciclo, materia, con_cupos=False):
+def oferta_academica(centro, ciclo, materia, con_cupos=False):
     url_oferta = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/sspseca.consulta_oferta'])
     payload = dict(ciclop=ciclo,
                    cup=centro,
@@ -453,7 +453,7 @@ class Siiau:
     def oferta(self, centro='', ciclo='', materia='', con_cupos=False) -> Tuple[ClaseOferta]:
         if ciclo == '':
             ciclo = self.sesion.ciclo
-        return oferta(centro, ciclo, materia, con_cupos)
+        return oferta_academica(centro, ciclo, materia, con_cupos)
 
 
 if __name__ == '__main__':
