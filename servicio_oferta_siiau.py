@@ -1,9 +1,6 @@
-from esquemas import ClaseOferta, Clase, DiaClase, HorarioOferta, DiasHorarioOferta, ProfesorOferta
-from servicio_consulta_siiau import oferta_academica
-from servicio_tabla import named_tuple_a_tabla
+from esquemas import ClaseOferta, Clase, DiaClase, HorarioOferta
 from utiles import simplificar_lista
 from servicio_horario_siiau import (
-    compactar_horario_por_clases, 
     __obtener_fecha_completa,
     __convertir_formato_24000_a_12h,
     __procesar_rango_horas,
@@ -171,19 +168,8 @@ def estructurar_oferta_como_horario(oferta: Tuple[ClaseOferta]) -> Tuple[Tuple[C
 
 
 if __name__ == '__main__':
-    # from os import environ as envF
-    # from dotenv import load_dotenv
-    # import time
-    # usuario = env['USUARIO_G']
-    # contra = env['CONTRA_G']
-    # carrera = env['CARRERA_G']
-    # ciclo = env['CICLO_ACTUAL_G']
+    print('Esto no se debe mostrar. Ejecutando desde servicio_oferta_siiau')
 
-    oferta_202210 = oferta_academica(centro='D', ciclo='202210', materia='I7024')
-    horario_oferta, hay_solap, solapamientos = estructurar_oferta_como_horario(oferta=oferta_202210)
-    horario_oferta_compacto = compactar_horario_por_clases(horario_oferta)
-    tabla_horario_oferta = named_tuple_a_tabla(horario_oferta_compacto, horario_compacto=True, por_columnas=True)
-    print(horario_oferta)
 
     
 
