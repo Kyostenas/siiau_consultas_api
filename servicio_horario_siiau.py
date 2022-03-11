@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from consulta_siiau_service import HorarioCompletoSiiau
+from servicio_consulta_siiau import HorarioCompletoSiiau
 from esquemas import Clase, DiaClase, HorarioCompacto
 from typing import NamedTuple, Union
 from utiles import aplanar_lista

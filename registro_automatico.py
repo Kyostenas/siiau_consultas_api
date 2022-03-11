@@ -1,1 +1,0 @@
-#TODO agregar opcion de registro automatico

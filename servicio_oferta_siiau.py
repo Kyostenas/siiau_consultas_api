@@ -1,5 +1,5 @@
-from horario_siiau_service import compactar_horario_por_clases
-from consulta_siiau_service import oferta
+from servicio_horario_siiau import compactar_horario_por_clases
+from servicio_consulta_siiau import oferta
 from esquemas import ClaseOferta, Clase
 from typing import NamedTuple, Tuple, List
 
