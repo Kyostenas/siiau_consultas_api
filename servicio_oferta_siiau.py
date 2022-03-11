@@ -1,14 +1,11 @@
+from esquemas import ClaseOferta, Clase, HorarioOferta, DiasHorarioOferta
 from servicio_horario_siiau import compactar_horario_por_clases
 from servicio_consulta_siiau import oferta
-from esquemas import ClaseOferta, Clase
 from typing import NamedTuple, Tuple, List
+from utiles import simplificar_lista
 
 
-def estructurar_oferta_como_horario(oferta: Tuple[ClaseOferta]):
-    pass
-
-
-def obtener_campos_oferta(oferta: Tuple[ClaseOferta]) -> ClaseOferta:
+def obtener_campos_clases(oferta: Tuple[ClaseOferta]) -> ClaseOferta:
     """
     Retorna tupla nombrada que permite escoger los campos en conjuntos
     de todas las materias de la oferta ingresada
@@ -23,21 +20,66 @@ def obtener_campos_oferta(oferta: Tuple[ClaseOferta]) -> ClaseOferta:
     return campos_oferta
 
 
+def clases_se_solapan(oferta: Tuple[ClaseOferta]) -> Tuple[bool, List[int]]:
+
+    campos = obtener_campos_clases(oferta=oferta)
+    horarios: Tuple[HorarioOferta] = campos.horarios
+    indices_clases_solapadas = []
+    clases_se_solapan = False
+    
+    dias_sensores = [False, False, False, False, False, False]
+    conjunto_dias_horas = dict()
+    for i_clase, horarios_una_clase in enumerate(horarios):
+        for un_horario_una_clase in horarios_una_clase:
+            un_horario_una_clase: HorarioOferta
+            hora = un_horario_una_clase.hora
+
+            try:
+                conjunto_dias_horas[hora]
+            except KeyError:
+                conjunto_dias_horas[hora] = {'indices': [i_clase], 'sensores': dias_sensores}
+            
+            for i_dia, dia_horario_por_revisar in enumerate(un_horario_una_clase.dias):
+                if conjunto_dias_horas[hora]['sensores'][i_dia] is False:
+                    if dia_horario_por_revisar is True:
+                        conjunto_dias_horas[hora]['sensores'][i_dia] = True
+                elif conjunto_dias_horas[hora]['sensores'][i_dia] is True:
+                    if dia_horario_por_revisar is True:
+                        conjunto_dias_horas[hora]['indices'].append(i_clase)
+                        indices_clases_solapadas += conjunto_dias_horas[hora]['indices']
+                        if clases_se_solapan is False:
+                            clases_se_solapan = True  # Si ya era verdadero, ya hay una clase ahi. Se solapan
+    
+    indices_clases_solapadas = simplificar_lista(indices_clases_solapadas)
+
+    return clases_se_solapan, indices_clases_solapadas
+
+
+def filtrar_clases_no_solapadas(oferta: Tuple[ClaseOferta]) -> Tuple[ClaseOferta]:
+    pass
+
+
+def estructurar_oferta_como_horario(oferta: Tuple[ClaseOferta]) -> Tuple[Clase]:
+    hay_clases_solapadas = clases_se_solapan(oferta=oferta)
+    # if hay_clases_solapadas:
+    #     print(hay_clases_solapadas)
+    #     pass
+    # else:
+    #     print(hay_clases_solapadas)
+
 
 if __name__ == '__main__':
     # from os import environ as envF
     # from dotenv import load_dotenv
     # import time
-
     # usuario = env['USUARIO_G']
     # contra = env['CONTRA_G']
     # carrera = env['CARRERA_G']
     # ciclo = env['CICLO_ACTUAL_G']
 
-    oferta = oferta(centro='D', ciclo='202210', materia='I7024')
-    campos_oferta = obtener_campos_oferta(oferta=oferta)
-    campo = campos_oferta.nrc
-    list(map(print, campo))
+    oferta_202210 = oferta(centro='D', ciclo='202210', materia='I7024')
+    estructurar_oferta_como_horario(oferta=oferta_202210)
+
     
 
     
