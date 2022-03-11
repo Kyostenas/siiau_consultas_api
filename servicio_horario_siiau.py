@@ -153,9 +153,9 @@ def __procesar_rango_horas(inicio: str, final: str):
     return rango_horas_de_clase_formateadas
 
 
-def __obtener_fecha_completa(fecha: str):
+def __obtener_fecha_completa(fecha: str, separador: str):
         # Fechas en horario siiau son: dd-mm-aa
-        dia, mes, year = tuple(map(int, fecha.split('-')))
+        dia, mes, year = tuple(map(int, fecha.split(separador)))
         dia_semana = datetime.date(year, mes, dia).weekday()
         nombre_dia = NOMBRES_DIAS[dia_semana + 1]
         nombre_mes = NOMBRES_MESES[mes]
@@ -238,8 +238,8 @@ def _procesar_clase(horario_por_columnas: HorarioCompletoSiiau, nrc_clase, i_dat
     _procesar_dias_clase(datos_clase, horario_por_columnas, i_horario)
     datos_clase['fecha_inicio'] = fecha_inicio
     datos_clase['fecha_final'] = fecha_final
-    datos_clase['fecha_inicio_completa'] = __obtener_fecha_completa(fecha_inicio)
-    datos_clase['fecha_final_completa'] = __obtener_fecha_completa(fecha_final)
+    datos_clase['fecha_inicio_completa'] = __obtener_fecha_completa(fecha_inicio, '-')
+    datos_clase['fecha_final_completa'] = __obtener_fecha_completa(fecha_final, '-')
 
     return datos_clase
 
