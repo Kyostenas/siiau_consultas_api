@@ -1,8 +1,10 @@
+from ctypes import Union
 from esquemas import ClaseOferta, Clase, HorarioOferta, DiasHorarioOferta
 from servicio_horario_siiau import compactar_horario_por_clases
 from servicio_consulta_siiau import oferta
-from typing import NamedTuple, Tuple, List
 from utiles import simplificar_lista
+
+from typing import List, Tuple, Union
 
 
 def obtener_campos_clases(oferta: Tuple[ClaseOferta]) -> ClaseOferta:
@@ -20,7 +22,7 @@ def obtener_campos_clases(oferta: Tuple[ClaseOferta]) -> ClaseOferta:
     return campos_oferta
 
 
-def clases_se_solapan(oferta: Tuple[ClaseOferta]) -> Tuple[bool, List[int]]:
+def revisar_solapamientos(oferta: Tuple[ClaseOferta]) -> Tuple[bool, Tuple[int]]:
 
     campos = obtener_campos_clases(oferta=oferta)
     horarios: Tuple[HorarioOferta] = campos.horarios
@@ -50,22 +52,27 @@ def clases_se_solapan(oferta: Tuple[ClaseOferta]) -> Tuple[bool, List[int]]:
                         if clases_se_solapan is False:
                             clases_se_solapan = True  # Si ya era verdadero, ya hay una clase ahi. Se solapan
     
-    indices_clases_solapadas = simplificar_lista(indices_clases_solapadas)
+    indices_clases_solapadas = tuple(simplificar_lista(indices_clases_solapadas))
 
     return clases_se_solapan, indices_clases_solapadas
 
 
-def filtrar_clases_no_solapadas(oferta: Tuple[ClaseOferta]) -> Tuple[ClaseOferta]:
-    pass
+def filtrar_clases_solapadas(oferta: Tuple[ClaseOferta], 
+                             indices_solapados: Union[Tuple[int], List[int]]) -> Tuple[ClaseOferta]:
+    filtradas = []
+    [filtradas.append(clase) for i_clase, clase in enumerate(oferta) if i_clase not in indices_solapados]
+    filtradas = tuple(filtradas)
+
+    return filtradas
 
 
 def estructurar_oferta_como_horario(oferta: Tuple[ClaseOferta]) -> Tuple[Clase]:
-    hay_clases_solapadas = clases_se_solapan(oferta=oferta)
-    # if hay_clases_solapadas:
-    #     print(hay_clases_solapadas)
-    #     pass
-    # else:
-    #     print(hay_clases_solapadas)
+    hay_clases_solapadas, clases_que_se_solapan = revisar_solapamientos(oferta=oferta)
+    if hay_clases_solapadas:
+        clases_filtradas = filtrar_clases_solapadas(oferta, clases_que_se_solapan)
+        print(clases_filtradas)
+    else:
+        print(hay_clases_solapadas)
 
 
 if __name__ == '__main__':
