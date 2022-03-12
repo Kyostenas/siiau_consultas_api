@@ -1,90 +1,70 @@
-from typing import NamedTuple
-import itertools
+from servicio_oferta_siiau import estructurar_oferta_como_horario
+from servicio_horario_siiau import compactar_horario_por_clases
+from servicio_tabla import named_tuple_a_tabla
+from esquemas import ClaseOferta
+from typing import Tuple
+
+from itertools import product
+
+from utiles import simplificar_lista
+
+I_CONJUNTO = 0
+I_INDICE_CLASE = 1
 
 
-class TablasHorario(NamedTuple):
-    horario: list
-    descripcionesMateria: list
+def __obtener_indices(conjuntos_clases: Tuple[Tuple[ClaseOferta]]):
+    for i_conjunto, conjunto in enumerate(conjuntos_clases):
+        yield ((i_conjunto, i_clase) for i_clase, _ in enumerate(conjunto))
 
 
-def _hacer_tabla(horario: dict):
-    # Desde (1, 1) hasta (15, 6)
-    horario_tabla = [['HORA', 'L', 'M', 'I', 'J', 'V', 'S'],
-                     ['07:00 am\n07:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['08:00 am\n08:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['09:00 am\n09:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['10:00 am\n10:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['11:00 am\n11:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['12:00 am\n12:55 am', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['01:00 pm\n01:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['02:00 pm\n02:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['03:00 pm\n03:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['04:00 pm\n04:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['05:00 pm\n05:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['06:00 pm\n06:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['07:00 pm\n07:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['08:00 pm\n08:55 pm', ' ', ' ', ' ', ' ', ' ', ' '],
-                     ['09:00 pm\n09:55 pm', ' ', ' ', ' ', ' ', ' ', ' ']]
+def combinar_clases(conjuntos_clases: Tuple[Tuple[ClaseOferta]], evitar_solapadas=True):
+    indices = __obtener_indices(conjuntos_clases)
+    conjuntos_indices = tuple(map(tuple, indices))
+    conjuntos_combinados = list(product(*conjuntos_indices))
 
-    descripciones = [('NRC', 'CLAVE', 'MATERIA', 'PROFESOR/ES')]
-
-    for nrc, valores in horario.items():
-        for rango in valores['rango_por_dia']:
-            y = rango[0] + 1
-            x = rango[1] + 1
-            if horario_tabla[y][x] != '':
-                return None
-            horario_tabla[y][x] = nrc
-        profes = [profe['nombre'] for profe in valores['profesores']]
-        descripciones.append(
-            [
-                nrc,
-                valores['clave'],
-                valores['nombre'],
-                '\n'.join(profes)
-            ]
+    for combinacion in conjuntos_combinados:
+        clases_combinacion = []
+        for indicador_clase in combinacion:
+            i_conjunto = indicador_clase[I_CONJUNTO]
+            i_clase = indicador_clase[I_INDICE_CLASE]
+            clases_combinacion.append(conjuntos_clases[i_conjunto][i_clase])
+        estructurada, se_solapan, i_clases_solapadas = estructurar_oferta_como_horario(
+            clases_combinacion
         )
+        if evitar_solapadas:
+            if se_solapan:
+                pass
+            else:
+                yield estructurada
+        else:
+            if se_solapan:
+                yield estructurada, se_solapan, i_clases_solapadas
+            else:
+                yield estructurada
+    
 
-    return TablasHorario(horario_tabla, descripciones)
+
+if __name__ == '__main__':
+    from servicio_consulta_siiau import oferta_academica
+    from os import environ as env
+    from dotenv import load_dotenv
+    from utiles import limpiar_pantalla
+    load_dotenv()
+    usuario: str = env['USUARIO_Y']
+    contra: str = env['CONTRA_Y']
+    carrera: str = env['CARRERA_Y']
+    ciclo: str = env['CICLO_ACTUAL_Y']
+    MATERIAS_INCO=['I7024','I7023','I5886','I5887','I5896','I5897']
+
+    conjuntos_oferta = tuple(map(lambda materia: oferta_academica('D', '202210', materia), MATERIAS_INCO))
+    combinadas = combinar_clases(conjuntos_oferta)
+
+    for x in combinadas:
+        compacta = compactar_horario_por_clases(x)
+        print(named_tuple_a_tabla(compacta, horario_compacto=True, por_columnas=True))
+        input()
+        limpiar_pantalla()
 
 
-def combinar_nrcs(nrcs: dict, materias: dict, selProfs: dict):
-    posibles_horarios = {}
-    nrcs_preparados = [[(clave, nrc_simSim) for nrc_simSim in arreglo]
-                       for clave, arreglo in nrcs.items()]
+        
 
-    nrcs_combinados = itertools.product(*nrcs_preparados)
-
-    i = 1
-    for horario in nrcs_combinados:
-        correcto = True
-        for cve, nrc in horario:
-            for profe in materias[cve][nrc]['profesores']:
-                if profe['nombre'] not in selProfs[cve]:
-                    correcto = False
-                    break
-            if correcto is False:
-                break
-
-        if correcto:
-            posible_formado = {
-                'nrcs': [nrc for cve, nrc in horario],
-                'materias': {
-                    nrc: {
-                        'clave': materias[cve][nrc]['clave'],
-                        'nrc': materias[cve][nrc]['nrc'],
-                        'seccion': materias[cve][nrc]['seccion'],
-                        'nombre': materias[cve][nrc]['nombre'],
-                        'profesores': materias[cve][nrc]['profesores'],
-                        'rango_por_dia': materias[cve][nrc]['rango_por_dia'],
-                    } for cve, nrc in horario
-                },
-            }
-            tablas = _hacer_tabla(posible_formado['materias'])
-            if tablas is not None:
-                posible_formado['tabla_horario'] = tablas.horario
-                posible_formado['tabla_descripciones'] = tablas.descripcionesMateria
-                posibles_horarios[f'horario_{i}'] = posible_formado
-                i = i + 1
-
-    return posibles_horarios
