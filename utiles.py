@@ -7,7 +7,6 @@ para suplirla.
 """
 
 import re, io, json, xlwt, os
-from typing import AnyStr
 from xlwt import Workbook
 import datetime
 
@@ -182,3 +181,6 @@ def simplificar_lista(lista: list) -> list:
     [revisada.append(elemento) for elemento in lista if elemento not in revisada]
 
     return revisada
+
+def limpiar_pantalla() -> None:
+    os.system('cls' if os.name == 'nt' else 'clear')
