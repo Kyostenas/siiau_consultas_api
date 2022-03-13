@@ -54,8 +54,8 @@ MITAD_HORA_RANGO_HHMM = 0
 
 
 
-NOMBRES_DIAS = {1: 'Lunes',  2: 'Martes',  3: 'Miércoles',
-                4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+NOMBRES_DIAS = {1: 'Lunes',  2: 'Martes',  3: 'Miercoles',
+                4: 'Jueves', 5: 'Viernes', 6: 'Sabado',
                 7: 'Domingo'}  # Domingo porque en virtuales pueden comenzar en Domingo D:
 NOMBRES_MESES = {1: 'Enero',    2: 'Febrero',    3: 'Marzo',
                  4: 'Abril',    5: 'Mayo',       6: 'Junio',
