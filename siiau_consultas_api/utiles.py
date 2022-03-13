@@ -32,6 +32,15 @@ VALORES_CICLOS = {
     'B': '20'
 }
 
+# Código cortesía de John Machin 
+# https://stackoverflow.com/questions/2186919/getting-correct-string-length-in-python-for-strings-with-ansi-color-codes
+SECUENCIAS_ANSI = re.compile(r"""
+    \x1b     # Literal ESC
+    \[       # Literal [
+    [;\d]*   # 0 o más digitos o punto y coma
+    [A-Za-a] # Una letra
+""")
+
 
 def convertir_ciclo_a_entero(ciclo: str) -> int:
     """
@@ -208,9 +217,18 @@ def regresar_cursor_inicio_pantalla() -> None:
     print('\x1b[H')
 
 
-def print_actualizable(sep, *cadenas) -> None:
+def print_actualizable(*cadenas, sep=' ') -> None:
     """
     Puede seguir imprimiendo en la misma linea sin borrar lo
     anterior. Da el efecto de que se actualiza la linea.
     """
     print(*cadenas, sep=sep, end='\r', flush=True)
+
+
+# Código cortesía de John Machin 
+# https://stackoverflow.com/questions/2186919/getting-correct-string-length-in-python-for-strings-with-ansi-color-codes
+def limpiar_secuencias_ANSI(cadena):
+    """
+    Limpia todas las secuencias ANSI de una cadena de texto.
+    """
+    return SECUENCIAS_ANSI.sub('', cadena)
