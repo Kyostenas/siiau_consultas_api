@@ -24,6 +24,7 @@ para suplirla.
 """
 
 import re, io, json, xlwt, os
+from typing import Tuple
 from xlwt import Workbook
 import datetime
 
@@ -39,7 +40,7 @@ SECUENCIAS_ANSI = re.compile(r"""
     \[       # Literal [
     [;\d]*   # 0 o más digitos o punto y coma
     [A-Za-a] # Una letra
-""")
+    """, re.VERBOSE)
 
 
 def convertir_ciclo_a_entero(ciclo: str) -> int:
@@ -231,4 +232,9 @@ def limpiar_secuencias_ANSI(cadena):
     """
     Limpia todas las secuencias ANSI de una cadena de texto.
     """
-    return SECUENCIAS_ANSI.sub('', cadena)
+    return re.sub(SECUENCIAS_ANSI, '', cadena)
+
+
+def tam_consola() -> Tuple[int, int]:
+    cols_terminal, filas_terminal = os.get_terminal_size()
+    return cols_terminal, filas_terminal
