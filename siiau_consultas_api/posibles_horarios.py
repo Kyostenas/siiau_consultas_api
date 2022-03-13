@@ -1,3 +1,20 @@
+# siiau-consultas-api: Consulta información del SIIAU de la UDG
+# Copyright (C) 2022  Benjamín Ramírez
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
 from servicio_oferta_siiau import estructurar_oferta_como_horario
 from servicio_horario_siiau import compactar_horario_por_clases
 from servicio_tabla import named_tuple_a_tabla
@@ -35,35 +52,18 @@ def combinar_clases(conjuntos_clases: Tuple[Tuple[ClaseOferta]], evitar_solapada
             if se_solapan:
                 pass
             else:
-                yield estructurada
+                yield estructurada, se_solapan, i_clases_solapadas
         else:
             if se_solapan:
                 yield estructurada, se_solapan, i_clases_solapadas
             else:
-                yield estructurada
+                yield estructurada, se_solapan, i_clases_solapadas
     
 
 
 if __name__ == '__main__':
-    from servicio_consulta_siiau import oferta_academica
-    from os import environ as env
-    from dotenv import load_dotenv
-    from utiles import limpiar_pantalla
-    load_dotenv()
-    usuario: str = env['USUARIO_Y']
-    contra: str = env['CONTRA_Y']
-    carrera: str = env['CARRERA_Y']
-    ciclo: str = env['CICLO_ACTUAL_Y']
-    MATERIAS_INCO=['I7024','I7023','I5886','I5887','I5896','I5897']
+    print('Ejecutando desde posibles_horarios. Esto no se deberia ver.')
 
-    conjuntos_oferta = tuple(map(lambda materia: oferta_academica('D', '202210', materia), MATERIAS_INCO))
-    combinadas = combinar_clases(conjuntos_oferta)
-
-    for x in combinadas:
-        compacta = compactar_horario_por_clases(x)
-        print(named_tuple_a_tabla(compacta, horario_compacto=True, por_columnas=True))
-        input()
-        limpiar_pantalla()
 
 
         
