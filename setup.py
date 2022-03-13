@@ -17,7 +17,8 @@ setup(
     'Unidecode',
     'xlwt',
     'beautifulsoup4',
-    'tabulate'
+    'tabulate',
+    'msvcrt'
   ],
   classifiers=[
     'Development Status :: 0 - Alpha',      
