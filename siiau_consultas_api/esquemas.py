@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import NamedTuple, Tuple, Union
+from typing import Any, NamedTuple, Tuple, Union
 
 
 class DatosSesion(NamedTuple):
@@ -237,3 +237,8 @@ class Teclas(NamedTuple):
     com_ctrl_x: int = 24
     com_ctrl_y: int = 25
     com_ctrl_z: int = 26
+
+
+class Opcion(NamedTuple):
+    mensaje: str
+    funcion: Any
