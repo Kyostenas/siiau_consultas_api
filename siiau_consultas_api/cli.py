@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from concurrent.futures.process import EXTRA_QUEUED_CALLS
 from typing import List, Tuple
 from utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, print_actualizable, tam_consola
 from utiles import es_alguna_instancia, limpiar_secuencias_ANSI
@@ -52,9 +53,16 @@ def seleccion(texto: str, cursor: str):
     return f'{pre} {seleccionado}', ancho_real
 
 
-def titulo(texto: str, margin: int = 1):
-    ancho_real = f'{" "*margin}{texto}{" "*margin}'.__len__()
-    return f'{Style.BRIGHT}{Fore.WHITE}{Back.CYAN}{" "*margin}{texto}{" "*margin}{Style.RESET_ALL}', ancho_real
+def titulo(texto: str, margen: int = 1):
+    ancho_real = f'{" "*margen}{texto}{" "*margen}'.__len__()
+    return f'{Style.BRIGHT}{Fore.WHITE}{Back.CYAN}{" "*margen}{texto}{" "*margen}{Style.RESET_ALL}', ancho_real
+
+    
+def definicion(concepto: str, definicion: str, margen: int = 1):
+    ancho_real = f'{" "*margen}{concepto}{" "*margen} {definicion}'.__len__()
+    concepto_marcado = f'{Style.BRIGHT}{Fore.WHITE}{Back.MAGENTA}{" "*margen}{concepto}{" "*margen}{Style.RESET_ALL}'
+    concepto_y_definicion = f'{concepto_marcado} {definicion}'
+    return concepto_y_definicion, ancho_real
 
 
 def sub_titulo(texto: str):
@@ -137,8 +145,8 @@ def columnas_en_fila(*columnas: tuple, alineaciones, ancho_total):
     return ''.join(formadas)
 
 
-def centrar_horizontalmente(texto: str, alto_total: int):
-    alto_corregido = alto_total - 1
+def centrar_verticalmente(texto: str, alto_total: int, correccion: int = 2 ):
+    alto_corregido = alto_total - correccion
     lineas = texto.splitlines()
     alto_lineas = len(lineas)
     alto_partes = (alto_corregido - alto_lineas) // 2
@@ -205,17 +213,64 @@ def __formatear_encabezados(cols_terminal) -> str:
     
     return encabezados
 
+def __formatear_encabezados(cols_terminal) -> str:
+    fecha = datetime.now()
+    fecha = f'{fecha.day}-{fecha.month}-{fecha.year}'
+    fecha_completa, len_fech_com = sub_titulo(__obtener_fecha_completa(str(fecha), '-'))
+    usuario, len_usua = sub_titulo(USUARIO_DEFECTO)
+    encabezados = columnas_en_fila((fecha_completa, len_fech_com),
+                                    (PROGRAMA, LEN_PROG),
+                                    (usuario, len_usua),
+                                    alineaciones=(
+                                        alinear_linea_izquierda,
+                                        centrar_linea,
+                                        alinear_linea_derecha
+                                    ),
+                                    ancho_total=cols_terminal)
+    
+    return encabezados
+
+
+def __formatear_indicaciones(cols_terminal) -> str:
+    atajos = [
+        definicion('Flecha arr, ab', 'Moverse en menu'),
+        definicion('ENTER', 'Seleccionar opc'),
+        definicion('Retroceso', 'Salir'),
+    ]
+    linea_indicaciones = columnas_en_fila(
+        *atajos, 
+        alineaciones=[centrar_linea for _ in atajos], 
+        ancho_total=cols_terminal
+    )
+
+    return linea_indicaciones
+
+
+def __limpar_cli():
+    limpiar_pantalla()
+    regresar_cursor_inicio_pantalla()
+
 
 def menu(titulo_menu: str, opciones: Tuple[Opcion]):
     i_seleccion = 0
-    limpiar_pantalla()
-    regresar_cursor_inicio_pantalla()
+    ultimo_tam_cols, ultimo_tam_filas = tam_consola()
+    if ultimo_tam_cols > 187:
+            ultimo_tam_cols = 187
+    if ultimo_tam_filas > 44:
+            ultimo_tam_filas = 44
+
+    __limpar_cli()
     while True:
         cols_terminal, filas_terminal = tam_consola()
         if cols_terminal > 187:
             cols_terminal = 187
         if filas_terminal > 44:
             filas_terminal = 44
+
+        if (cols_terminal != ultimo_tam_cols) or (filas_terminal != ultimo_tam_filas):
+            ultimo_tam_cols = cols_terminal
+            ultimo_tam_filas = filas_terminal
+            __limpar_cli()
 
         titulo_formateado, len_titulo = titulo(titulo_menu, 2)
         titulo_centrado = centrar_linea(titulo_formateado, cols_terminal, len_titulo)
@@ -226,17 +281,16 @@ def menu(titulo_menu: str, opciones: Tuple[Opcion]):
         if i_seleccion < 0:
             i_seleccion = (len(opciones) - 1)
 
-        encabezados = __formatear_encabezados(cols_terminal)
+        encabezados_formados = __formatear_encabezados(cols_terminal)
+        indicaciones = __formatear_indicaciones(cols_terminal)
         opciones_formateadas = __formatear_opciones(opciones, i_seleccion, cols_terminal)
         menu_principal = [
             titulo_centrado,
             '',
             *opciones_formateadas
         ]
-        menu_centrado = centrar_horizontalmente('\n'.join(menu_principal), filas_terminal - 1)
-
-        encabezados_formados = __formatear_encabezados(cols_terminal)
-        print(encabezados_formados, menu_centrado)
+        menu_centrado = centrar_verticalmente('\n'.join(menu_principal), filas_terminal)
+        print(encabezados_formados, menu_centrado, indicaciones)
         input()
         i_seleccion += 1
         regresar_cursor_inicio_pantalla()
