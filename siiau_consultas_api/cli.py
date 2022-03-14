@@ -21,7 +21,7 @@ from utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, print_actu
 from utiles import es_alguna_instancia, limpiar_secuencias_ANSI
 from servicio_horario_siiau import __obtener_fecha_completa
 from esquemas import Teclas, Opcion
-from getch import ObtenerChar
+from getch import getch
 
 from colorama import Style, Back, Fore
 from datetime import datetime
@@ -80,11 +80,13 @@ def log(texto: str, trazo: str):
 
 
 CURSOR = '>'
+ESC_CODE = '\x1b'
 DELIMITADOR_RECUADRO = '|'
 EXTRA_ESP_CURSOR = len(CURSOR) + 1
 USUARIO_DEFECTO  = '000000000'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
+ENC_PIE = 2
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -214,28 +216,23 @@ def __formatear_encabezados(cols_terminal) -> str:
     return encabezados
 
 def __formatear_encabezados(cols_terminal) -> str:
-    fecha = datetime.now()
-    fecha = f'{fecha.day}-{fecha.month}-{fecha.year}'
-    fecha_completa, len_fech_com = sub_titulo(__obtener_fecha_completa(str(fecha), '-'))
     usuario, len_usua = sub_titulo(USUARIO_DEFECTO)
-    encabezados = columnas_en_fila((fecha_completa, len_fech_com),
-                                    (PROGRAMA, LEN_PROG),
-                                    (usuario, len_usua),
-                                    alineaciones=(
-                                        alinear_linea_izquierda,
-                                        centrar_linea,
-                                        alinear_linea_derecha
-                                    ),
-                                    ancho_total=cols_terminal)
+    encabezados = columnas_en_fila((PROGRAMA, LEN_PROG),
+                                   (usuario, len_usua),
+                                   alineaciones=(
+                                       centrar_linea,
+                                       centrar_linea,
+                                   ),
+                                   ancho_total=cols_terminal)
     
     return encabezados
 
 
 def __formatear_indicaciones(cols_terminal) -> str:
     atajos = [
-        definicion('Flecha arr, ab', 'Moverse en menu'),
-        definicion('ENTER', 'Seleccionar opc'),
-        definicion('Retroceso', 'Salir'),
+        definicion('/\ \/', 'Moverse'),
+        definicion('ENTER', 'Selecc'),
+        definicion('Backs', 'Salir'),
     ]
     linea_indicaciones = columnas_en_fila(
         *atajos, 
@@ -249,6 +246,20 @@ def __formatear_indicaciones(cols_terminal) -> str:
 def __limpar_cli():
     limpiar_pantalla()
     regresar_cursor_inicio_pantalla()
+
+
+def __leer_tecla():
+    ch = getch()
+    # print([ch])
+    if ch == ESC_CODE:
+        if getch() == '[':
+            ch += '['
+            ch += getch()
+            return sum(map(ord, ch))
+        else:
+            return ord(ch)
+    else:
+        return ord(ch)
 
 
 def menu(titulo_menu: str, opciones: Tuple[Opcion]):
@@ -274,6 +285,7 @@ def menu(titulo_menu: str, opciones: Tuple[Opcion]):
 
         titulo_formateado, len_titulo = titulo(titulo_menu, 2)
         titulo_centrado = centrar_linea(titulo_formateado, cols_terminal, len_titulo)
+        
         # Para hacer bucle de selecccion.
         # Se llega al final regresa al comienzo y viceversa
         if i_seleccion > (len(opciones) - 1):
@@ -289,13 +301,26 @@ def menu(titulo_menu: str, opciones: Tuple[Opcion]):
             '',
             *opciones_formateadas
         ]
-        menu_centrado = centrar_verticalmente('\n'.join(menu_principal), filas_terminal)
+        menu_centrado = centrar_verticalmente('\n'.join(menu_principal), filas_terminal - ENC_PIE)
         print(encabezados_formados, menu_centrado, indicaciones)
-        input()
-        i_seleccion += 1
+
+        tecla = __leer_tecla()
+        if tecla == Teclas().tec_flecha_ar or tecla == Teclas().tec_flecha_iz:
+            i_seleccion -= 1
+        elif tecla == Teclas().tec_flecha_ab or tecla == Teclas().tec_flecha_de:
+            i_seleccion += 1
+        elif tecla == Teclas().tec_enter:
+            pass
+        elif tecla == Teclas().tec_retroceso:
+            __limpar_cli()
+            exit()
+
         regresar_cursor_inicio_pantalla()
 
 if __name__ == '__main__':
+
+
+
     titulo_menu = 'MENU PRINCIPAL'
     opciones = [
     Opcion('Consultar oferta', str),
