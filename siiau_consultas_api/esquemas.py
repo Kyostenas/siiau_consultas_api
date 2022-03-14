@@ -166,6 +166,7 @@ class HorarioCompacto(NamedTuple):
     sabado: list
 
 
+# TODO revisar diferencias de codigos en Windows, Linux y Otros 
 class Teclas(NamedTuple):
     tec_1: int = 49
     tec_2: int = 50
@@ -205,11 +206,11 @@ class Teclas(NamedTuple):
     tec_z: int = 122
     tec_enter : int = 13
     tec_escape : int = 27
-    tec_retroceso: int = 8,
-    tec_flecha_ar : int = 72
-    tec_flecha_ab: int = 80
-    tec_flecha_iz : int = 75
-    tec_flecha_de : int = 77
+    tec_retroceso: int = 127
+    tec_flecha_ar : int = 183
+    tec_flecha_ab: int = 184
+    tec_flecha_iz : int = 186
+    tec_flecha_de : int = 185
     tec_espacio: int = 32
     com_ctrl_a: int = 1
     com_ctrl_b: int = 2
