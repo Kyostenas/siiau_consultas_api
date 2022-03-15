@@ -17,3 +17,11 @@
 
 # TODO Agregar interfaz para uso en consola
 
+
+    titulo_menu = 'MENU PRINCIPAL'
+    opciones = [
+    Opcion('Consultar oferta', str),
+    Opcion('Consultar horario', str),
+    Opcion('Registrar materias', str),
+    ]
+    menu(titulo_menu, opciones)
