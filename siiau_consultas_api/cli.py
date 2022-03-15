@@ -243,7 +243,8 @@ def __leer_tecla():
         return ord(ch)
 
 
-def menu_generico_seleccion(opciones: Tuple[Opcion], titulo_menu: str = 'MENU', subtitulo_menu: str = None):
+def menu_generico_seleccion(opciones: Tuple[Opcion], titulo_menu: str = 'MENU', subtitulo_menu: str = None,
+                            principal = True):
     i_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
     if ultimo_tam_cols > TAM_MAX_COLS:
@@ -304,8 +305,11 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], titulo_menu: str = 'MENU', 
             __limpar_cli()
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
-            print('Hasta luego')
-            exit()
+            if principal:  # Si es principal, y se aprieta salir, cierra el programa
+                print('Hasta luego')
+                exit()
+            else:  # Si no es principal, se sale del menu
+                break
 
         regresar_cursor_inicio_pantalla()
 
