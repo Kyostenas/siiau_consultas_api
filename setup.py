@@ -11,14 +11,14 @@ setup(
   download_url = '',    
   keywords = ['console', 'cli', 'siiau', 'udg'],   
   install_requires=[
-    'bs4',
-    'click',
-    'requests',
-    'Unidecode',
-    'xlwt',
-    'beautifulsoup4',
-    'tabulate',
-    'msvcrt'
+    'bs4==0.0.1',
+    'click==8.0.4',
+    'requests==2.27.1',
+    'Unidecode==1.3.4',
+    'xlwt==1.3.0',
+    'beautifulsoup4==4.10.0',
+    'tabulate==0.8.9',
+    'alive-progress==2.3.1',
   ],
   classifiers=[
     'Development Status :: 0 - Alpha',      
