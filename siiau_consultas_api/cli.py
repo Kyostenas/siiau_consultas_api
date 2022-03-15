@@ -15,11 +15,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import List, Tuple
-from utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
-from esquemas import Teclas, Opcion
-from getch import getch
+from .utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
+from .esquemas import Teclas, Opcion
+from .getch import getch
 
+from typing import List, Tuple
 from colorama import Style, Back, Fore
 
 

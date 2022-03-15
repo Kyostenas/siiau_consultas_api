@@ -15,9 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from esquemas import ClaseOferta, Clase, DiaClase, HorarioOferta
-from utiles import simplificar_lista
-from servicio_horario_siiau import (
+from .esquemas import ClaseOferta, Clase, DiaClase, HorarioOferta
+from .utiles import simplificar_lista
+from .servicio_horario_siiau import (
     __obtener_fecha_completa,
     __convertir_formato_24000_a_12h,
     __procesar_rango_horas,

@@ -15,12 +15,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import requests.exceptions
 
-from utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_lista
-from esquemas import (DatosHorarioSiiau, DatosSesion, HorarioCompletoSiiau, CarreraEstudiante,
+from .utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_lista
+from .esquemas import (DatosHorarioSiiau, DatosSesion, HorarioCompletoSiiau, CarreraEstudiante,
                             ClaseCompleta, CarreraCompleta, ClaseOferta, HorarioOferta, ProfesorOferta,
                             CentroCompleto, DiasHorarioOferta, CicloCompleto)
+
+import requests.exceptions
 from typing import NamedTuple, Tuple, List, Union
 from bs4 import BeautifulSoup as WebSp
 from requests import request, Session

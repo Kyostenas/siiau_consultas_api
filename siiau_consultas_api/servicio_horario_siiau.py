@@ -15,12 +15,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from __future__ import annotations
+from .servicio_consulta_siiau import HorarioCompletoSiiau
+from .esquemas import Clase, DiaClase, HorarioCompacto
+from .utiles import aplanar_lista
 
-from servicio_consulta_siiau import HorarioCompletoSiiau
-from esquemas import Clase, DiaClase, HorarioCompacto
-from typing import NamedTuple, Union
-from utiles import aplanar_lista
 import datetime
 
 CORRECCION_RANGO_HORAS = 5

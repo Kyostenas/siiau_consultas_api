@@ -15,15 +15,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from servicio_oferta_siiau import estructurar_oferta_como_horario
-from servicio_horario_siiau import compactar_horario_por_clases
-from servicio_tabla import named_tuple_a_tabla
-from esquemas import ClaseOferta
-from typing import Tuple
+from .servicio_oferta_siiau import estructurar_oferta_como_horario
+from .servicio_horario_siiau import compactar_horario_por_clases
+from .servicio_tabla import named_tuple_a_tabla
+from .esquemas import ClaseOferta
+from .utiles import simplificar_lista
 
+from typing import Tuple
 from itertools import product
 
-from utiles import simplificar_lista
 
 I_CONJUNTO = 0
 I_INDICE_CLASE = 1

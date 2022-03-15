@@ -15,11 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import NamedTuple, Union, List
-from utiles import es_alguna_instancia
-from os import get_terminal_size
-from tabulate import  tabulate
+from .utiles import es_alguna_instancia
+
 from textwrap import wrap
+from tabulate import  tabulate
+from typing import NamedTuple, Union, List
+from os import get_terminal_size
 
 MAX_TAM_FILA = 15
 

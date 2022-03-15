@@ -15,13 +15,27 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from .cli import menu_generico_seleccion as menu_gen
+from .esquemas import Opcion
+
 # TODO Agregar interfaz para uso en consola
 
 
+
+def menu_principal():
     titulo_menu = 'MENU PRINCIPAL'
     opciones = [
     Opcion('Consultar oferta', str),
-    Opcion('Consultar horario', str),
+    Opcion('Consultar centros', str),
+    Opcion('Consultar carreras (por centro)', str),
+    Opcion('Consultar materias (por carrera)', str),
+    Opcion('* Iniciar sesion', str),
+    Opcion('Consultar mi horario actual', str),
+    Opcion('Consultar mis carreras', str),
     Opcion('Registrar materias', str),
     ]
-    menu(titulo_menu, opciones)
+    menu_gen(opciones, titulo_menu)
+    
+
+if __name__ == '__main__':
+    menu_principal()

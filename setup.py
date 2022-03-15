@@ -1,13 +1,21 @@
 from distutils.core import setup
+
+from importlib_metadata import entry_points
+
+def readfile(filename):
+  with open(filename, 'r+') as f:
+    return f.read()
+
 setup(
-  name = 'siiau-consulta-api',         
-  packages = ['siiau-consulta-api'],   
+  name = 'siiau-consultas-api',         
+  packages = ['siiau_consultas_api'],   
   version = '0.0.0',      
-  license='GPL',        
-  description = 'Consulta información del SIIAU de la UDG',   
+  description = 'Consulta información del SIIAU de la UDG',
+  long_description=readfile('README.md'),
   author = 'Benjamin Ramirez',                   
   author_email = 'chilerito12@gmail.com',      
   url = 'https://github.com/Kyostenas/siiau_consultas_api',   
+  license=readfile('LICENSE'),        
   download_url = '',    
   keywords = ['console', 'cli', 'siiau', 'udg'],   
   install_requires=[
@@ -31,4 +39,9 @@ setup(
     'Programming Language :: Python :: 3.9'
     'Programming Language :: Python :: 3.10'
   ],
+  entry_points={
+    'console_scripts': [
+      'siiau-cli = siiau_consultas_api:menu_principal'
+    ]
+  }
 )
