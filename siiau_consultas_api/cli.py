@@ -243,8 +243,8 @@ def __leer_tecla():
         return ord(ch)
 
 
-def menu_generico_seleccion(opciones: Tuple[Opcion], titulo_menu: str = 'MENU', subtitulo_menu: str = None,
-                            principal = True):
+def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
+                            titulo_menu: str = 'MENU', subtitulo_menu: str = None):
     i_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
     if ultimo_tam_cols > TAM_MAX_COLS:
