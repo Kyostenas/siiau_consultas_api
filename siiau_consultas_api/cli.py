@@ -15,17 +15,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from concurrent.futures.process import EXTRA_QUEUED_CALLS
 from typing import List, Tuple
-from utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, print_actualizable, tam_consola
-from utiles import es_alguna_instancia, limpiar_secuencias_ANSI
-from servicio_horario_siiau import __obtener_fecha_completa
+from utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
 from esquemas import Teclas, Opcion
 from getch import getch
 
 from colorama import Style, Back, Fore
-from datetime import datetime
-import os
 
 
 def advertencia(texto: str, msj: str = 'ADVE'):
@@ -83,10 +78,12 @@ CURSOR = '>'
 ESC_CODE = '\x1b'
 DELIMITADOR_RECUADRO = '|'
 EXTRA_ESP_CURSOR = len(CURSOR) + 1
-USUARIO_DEFECTO  = '000000000'
+USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
+TAM_MAX_COLS = 187
+TAM_MAX_FILAS = 44
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -199,23 +196,6 @@ def __formatear_opciones(opciones: Tuple[Opcion], i_seleccion: int, cols_termina
 
 
 def __formatear_encabezados(cols_terminal) -> str:
-    fecha = datetime.now()
-    fecha = f'{fecha.day}-{fecha.month}-{fecha.year}'
-    fecha_completa, len_fech_com = sub_titulo(__obtener_fecha_completa(str(fecha), '-'))
-    usuario, len_usua = sub_titulo(USUARIO_DEFECTO)
-    encabezados = columnas_en_fila((fecha_completa, len_fech_com),
-                                    (PROGRAMA, LEN_PROG),
-                                    (usuario, len_usua),
-                                    alineaciones=(
-                                        alinear_linea_izquierda,
-                                        centrar_linea,
-                                        alinear_linea_derecha
-                                    ),
-                                    ancho_total=cols_terminal)
-    
-    return encabezados
-
-def __formatear_encabezados(cols_terminal) -> str:
     usuario, len_usua = sub_titulo(USUARIO_DEFECTO)
     encabezados = columnas_en_fila((PROGRAMA, LEN_PROG),
                                    (usuario, len_usua),
@@ -249,6 +229,7 @@ def __limpar_cli():
 
 
 def __leer_tecla():
+    # TODO probar compatibilidad con Windows
     ch = getch()
     # print([ch])
     if ch == ESC_CODE:
@@ -262,29 +243,32 @@ def __leer_tecla():
         return ord(ch)
 
 
-def menu(titulo_menu: str, opciones: Tuple[Opcion]):
+def menu_generico_seleccion(opciones: Tuple[Opcion], titulo_menu: str = 'MENU', subtitulo_menu: str = None):
     i_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
-    if ultimo_tam_cols > 187:
-            ultimo_tam_cols = 187
-    if ultimo_tam_filas > 44:
-            ultimo_tam_filas = 44
+    if ultimo_tam_cols > TAM_MAX_COLS:
+            ultimo_tam_cols = TAM_MAX_COLS
+    if ultimo_tam_filas > TAM_MAX_FILAS:
+            ultimo_tam_filas = TAM_MAX_FILAS
 
     __limpar_cli()
     while True:
         cols_terminal, filas_terminal = tam_consola()
-        if cols_terminal > 187:
-            cols_terminal = 187
-        if filas_terminal > 44:
-            filas_terminal = 44
+        if cols_terminal > TAM_MAX_COLS:
+            cols_terminal = TAM_MAX_COLS
+        if filas_terminal > TAM_MAX_FILAS:
+            filas_terminal = TAM_MAX_FILAS
 
         if (cols_terminal != ultimo_tam_cols) or (filas_terminal != ultimo_tam_filas):
             ultimo_tam_cols = cols_terminal
             ultimo_tam_filas = filas_terminal
             __limpar_cli()
 
-        titulo_formateado, len_titulo = titulo(titulo_menu, 2)
+        titulo_formateado, len_titulo = titulo(titulo_menu.upper(), 2)
         titulo_centrado = centrar_linea(titulo_formateado, cols_terminal, len_titulo)
+        if subtitulo_menu != None:
+            subt_formateado, len_sub = sub_titulo(subtitulo_menu.upper())
+            subt_centrado = centrar_linea(subt_formateado, cols_terminal, len_sub)
         
         # Para hacer bucle de selecccion.
         # Se llega al final regresa al comienzo y viceversa
@@ -296,11 +280,16 @@ def menu(titulo_menu: str, opciones: Tuple[Opcion]):
         encabezados_formados = __formatear_encabezados(cols_terminal)
         indicaciones = __formatear_indicaciones(cols_terminal)
         opciones_formateadas = __formatear_opciones(opciones, i_seleccion, cols_terminal)
+
         menu_principal = [
             titulo_centrado,
             '',
+            '',
             *opciones_formateadas
         ]
+        if subtitulo_menu != None:
+            menu_principal.insert(1, subt_centrado)
+
         menu_centrado = centrar_verticalmente('\n'.join(menu_principal), filas_terminal - ENC_PIE)
         print(encabezados_formados, menu_centrado, indicaciones)
 
@@ -310,21 +299,16 @@ def menu(titulo_menu: str, opciones: Tuple[Opcion]):
         elif tecla == Teclas().tec_flecha_ab or tecla == Teclas().tec_flecha_de:
             i_seleccion += 1
         elif tecla == Teclas().tec_enter:
-            pass
-        elif tecla == Teclas().tec_retroceso:
             __limpar_cli()
+            opciones[i_seleccion].funcion()  # Se ejecuta la funcion guardada en esa opcion
+            __limpar_cli()
+        elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
+            __limpar_cli()
+            print('Hasta luego')
             exit()
 
         regresar_cursor_inicio_pantalla()
 
+
 if __name__ == '__main__':
-
-
-
-    titulo_menu = 'MENU PRINCIPAL'
-    opciones = [
-    Opcion('Consultar oferta', str),
-    Opcion('Consultar horario', str),
-    Opcion('Registrar materias', str),
-    ]
-    menu(titulo_menu, opciones)
+    print('Esto no se deberia mostrar. Ejecutando desde cli.py')
