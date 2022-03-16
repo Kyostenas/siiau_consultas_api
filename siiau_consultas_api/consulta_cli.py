@@ -16,25 +16,50 @@
 
 
 from .cli import menu_generico_seleccion as menu_gen
+from .cli import pantalla_agregado_centrada as pantalla_para_agregar
+from .cli import titulo, sub_titulo, advertencia, error, correcto
 from .esquemas import Opcion
 
 # TODO Agregar interfaz para uso en consola
 
 
+def __agregar_materias_para_consultar(transferencia = {}):
+    try:
+        transferencia = transferencia['__agregar_materias_para_consultar']
+    except KeyError:
+        transferencia = []
+    transferencia = pantalla_para_agregar(7, 'agregar claves de materia', transferencia)
+    return transferencia
+
+
+def __menu_consultar_oferta():
+    titulo_menu = 'consultar oferta'
+    sub_titulo_menu = 'consulta y procesa la oferta academica'
+    opciones = [
+        Opcion('agregar materias para consultar', __agregar_materias_para_consultar),
+        Opcion('agregar nrcs exclusivos', str),
+        Opcion('ver materias agregadas', str),
+        Opcion('ver clases', str),
+        Opcion('generar posibles horarios', str),
+    ]
+    returno = menu_gen(opciones, False, titulo_menu, sub_titulo_menu)
+    print(returno)
+    exit()
+
 
 def menu_principal():
-    titulo_menu = 'MENU PRINCIPAL'
+    titulo_menu = 'menu principal'
     opciones = [
-    Opcion('Consultar oferta', str),
-    Opcion('Consultar centros', str),
-    Opcion('Consultar carreras (por centro)', str),
-    Opcion('Consultar materias (por carrera)', str),
-    Opcion('* Iniciar sesion', str),
-    Opcion('Consultar mi horario actual', str),
-    Opcion('Consultar mis carreras', str),
-    Opcion('Registrar materias', str),
+        Opcion('consultar oferta', __menu_consultar_oferta),
+        Opcion('consultar centros', str),
+        Opcion('consultar carreras (por centro)', str),
+        Opcion('consultar materias (por carrera)', str),
+        Opcion('* iniciar sesion', str),
+        Opcion('consultar mi horario actual', str),
+        Opcion('consultar mis carreras', str),
+        Opcion('registrar materias', str),
     ]
-    menu_gen(opciones, titulo_menu)
+    menu_gen(opciones, True, titulo_menu)
     
 
 if __name__ == '__main__':
