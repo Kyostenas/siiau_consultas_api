@@ -204,6 +204,32 @@ class Teclas(NamedTuple):
     tec_x: int = 120
     tec_y: int = 121
     tec_z: int = 122
+    tec_A: int = 65
+    tec_B: int = 66
+    tec_C: int = 67
+    tec_D: int = 68
+    tec_E: int = 69
+    tec_F: int = 70
+    tec_G: int = 71
+    tec_H: int = 72
+    tec_I: int = 73
+    tec_J: int = 74
+    tec_K: int = 75
+    tec_L: int = 76
+    tec_M: int = 77
+    tec_N: int = 78
+    tec_O: int = 79
+    tec_P: int = 80
+    tec_Q: int = 81
+    tec_R: int = 82
+    tec_S: int = 83
+    tec_T: int = 84
+    tec_U: int = 85
+    tec_V: int = 86
+    tec_W: int = 87
+    tec_X: int = 88
+    tec_Y: int = 89
+    tec_Z: int = 90
     tec_enter : int = 13
     tec_escape : int = 27
     tec_retroceso: int = 127
@@ -238,6 +264,80 @@ class Teclas(NamedTuple):
     com_ctrl_x: int = 24
     com_ctrl_y: int = 25
     com_ctrl_z: int = 26
+
+tc_ = Teclas()
+LETRAS = tc_[10:62]
+NUMEROS = tc_[0:10]
+
+
+LETRAS_DIC = {
+    97: "a",
+    98: "b",
+    99: "c",
+    100: "d",
+    101: "e",
+    102: "f",
+    103: "g",
+    104: "h",
+    105: "i",
+    106: "j",
+    107: "k",
+    108: "l",
+    109: "m",
+    110: "n",
+    111: "o",
+    112: "p",
+    113: "q",
+    114: "r",
+    115: "s",
+    116: "t",
+    117: "u",
+    118: "v",
+    119: "w",
+    120: "x",
+    121: "y",
+    122: "z",
+    65: "A",
+    66: "B",
+    67: "C",
+    68: "D",
+    69: "E",
+    70: "F",
+    71: "G",
+    72: "H",
+    73: "I",
+    74: "J",
+    75: "K",
+    76: "L",
+    77: "M",
+    78: "N",
+    79: "O",
+    80: "P",
+    81: "Q",
+    82: "R",
+    83: "S",
+    84: "T",
+    85: "U",
+    86: "V",
+    87: "W",
+    88: "X",
+    89: "Y",
+    90: "Z",
+}
+
+
+NUMEROS_DIC = {
+    49: '1',
+    50: '2',
+    51: '3',
+    52: '4',
+    53: '5',
+    54: '6',
+    55: '7',
+    56: '8',
+    57: '9',
+    48: '0',
+}
 
 
 class Opcion(NamedTuple):
