@@ -15,13 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .utiles import limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
-from .esquemas import Teclas, Opcion
+from .utiles import aplanar_lista, limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
+from .esquemas import Teclas, Opcion, LETRAS, NUMEROS, LETRAS_DIC, NUMEROS_DIC
+from .utiles import particionar
 from .getch import getch
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from colorama import Style, Back, Fore
+from math import sqrt
 
+
+# TODO mejorar nombres de estilos de texto para que no conflictuen con variables
 
 def advertencia(texto: str, msj: str = 'ADVE'):
     ancho_real = f'{msj} {texto}'.__len__()
@@ -168,12 +172,20 @@ def __formatear_una_opcion(opcion_texto: str, max_len: int,
         len_opcion = len(opcion_formateada)
     nuevo_max_len = max_len + EXTRA_ESP_CURSOR
 
-    a_izquierda = alinear_linea_izquierda(opcion_formateada, nuevo_max_len, len_opcion)
-    linea_recuadro_opciones = centrar_linea(a_izquierda, nuevo_max_len + MARGEN_RECUADRO_OPC, nuevo_max_len)
-    linea_recuadro_opciones = ''.join([DELIMITADOR_RECUADRO, linea_recuadro_opciones, DELIMITADOR_RECUADRO])
+    a_izquierda = alinear_linea_izquierda(opcion_formateada, 
+                                          nuevo_max_len, 
+                                          len_opcion)
+    linea_recuadro_opciones = centrar_linea(a_izquierda, 
+                                            nuevo_max_len + MARGEN_RECUADRO_OPC, 
+                                            nuevo_max_len)
+    linea_recuadro_opciones = ''.join([DELIMITADOR_RECUADRO, 
+                                       linea_recuadro_opciones, 
+                                       DELIMITADOR_RECUADRO])
     len_linea_recuadro = len(DELIMITADOR_RECUADRO) * 2 + nuevo_max_len + MARGEN_RECUADRO_OPC
-
-    linea_recuadro_centrada = centrar_linea(linea_recuadro_opciones, cols_terminal, len_linea_recuadro, ' ')
+    linea_recuadro_centrada = centrar_linea(linea_recuadro_opciones, 
+                                            cols_terminal, 
+                                            len_linea_recuadro, 
+                                            ' ')
 
     return linea_recuadro_centrada
 
@@ -208,16 +220,31 @@ def __formatear_encabezados(cols_terminal) -> str:
     return encabezados
 
 
-def __formatear_indicaciones(cols_terminal) -> str:
+def __formatear_indicaciones(tam_espacio, principal: bool) -> str:
+    if principal:
+        salir = 'salir'
+    else:
+        salir = 'regresar'
     atajos = [
-        definicion('/\ \/', 'Moverse'),
-        definicion('ENTER', 'Selecc'),
-        definicion('Backs', 'Salir'),
+        definicion('/\ \/', 'moverse'),
+        definicion('ENTER', 'selecc'),
+        definicion('Retroc', salir),
     ]
     linea_indicaciones = columnas_en_fila(
         *atajos, 
         alineaciones=[centrar_linea for _ in atajos], 
-        ancho_total=cols_terminal
+        ancho_total=tam_espacio
+    )
+
+    return linea_indicaciones
+
+
+def __indicaciones_personalicadas(atajos: tuple, tam_espacio) -> str:
+    atajos = [definicion(*un_atajo) for un_atajo in atajos]
+    linea_indicaciones = columnas_en_fila(
+        *atajos, 
+        alineaciones=[centrar_linea for _ in atajos], 
+        ancho_total=tam_espacio
     )
 
     return linea_indicaciones
@@ -245,6 +272,7 @@ def __leer_tecla():
 
 def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
                             titulo_menu: str = 'MENU', subtitulo_menu: str = None):
+    resultados_ejecuciones = {}
     i_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
     if ultimo_tam_cols > TAM_MAX_COLS:
@@ -279,7 +307,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
             i_seleccion = (len(opciones) - 1)
 
         encabezados_formados = __formatear_encabezados(cols_terminal)
-        indicaciones = __formatear_indicaciones(cols_terminal)
+        indicaciones = __formatear_indicaciones(cols_terminal, principal)
         opciones_formateadas = __formatear_opciones(opciones, i_seleccion, cols_terminal)
 
         menu_principal = [
@@ -292,8 +320,9 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
             menu_principal.insert(1, subt_centrado)
 
         menu_centrado = centrar_verticalmente('\n'.join(menu_principal), filas_terminal - ENC_PIE)
-        print(encabezados_formados, menu_centrado, indicaciones)
+        print(encabezados_formados, menu_centrado, indicaciones)  # Se muestra el menu
 
+        """ En esta parte se espera una tecla y se hace algo con el resultado """
         tecla = __leer_tecla()
         if tecla == Teclas().tec_flecha_ar or tecla == Teclas().tec_flecha_iz:
             i_seleccion -= 1
@@ -301,7 +330,22 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
             i_seleccion += 1
         elif tecla == Teclas().tec_enter:
             __limpar_cli()
-            opciones[i_seleccion].funcion()  # Se ejecuta la funcion guardada en esa opcion
+            funcion_obtenida = opciones[i_seleccion].funcion  # Se obtiene la funcion
+            nombre_funcion = funcion_obtenida.__name__  # Se obtiene el nombre como cadena
+            try:
+                # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
+                # la transferencia (resultados anteriores de otras ejecuciones)
+                retorno_funcion = funcion_obtenida(transferencia=resultados_ejecuciones)
+            except TypeError:
+                # Se ejecuta la funcion guardada en esa opcion
+                retorno_funcion = funcion_obtenida()  
+
+            # Se guarda el resultado de la funcion en un diccionario
+            try:            
+                resultados_ejecuciones[nombre_funcion].append(retorno_funcion)
+            except:
+                resultados_ejecuciones[nombre_funcion] = [retorno_funcion]
+                
             __limpar_cli()
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
@@ -309,8 +353,156 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
                 print('Hasta luego')
                 exit()
             else:  # Si no es principal, se sale del menu
-                break
+                return resultados_ejecuciones
 
+        regresar_cursor_inicio_pantalla()
+        
+        
+def __centrar_agregados(agregados, espacio, i_fila_sel, i_col_sel):
+    lineas_en_columnas = []
+    for i_fila, fila in enumerate(agregados):
+        para_hacer_linea = []
+        for i_col, col in enumerate(fila):
+            if (i_fila, i_col) == (i_fila_sel, i_col_sel):
+                nueva_col = seleccion(col, CURSOR)
+            else:
+                nueva_col = tuple([col, len(col)])
+            para_hacer_linea.append(nueva_col)
+        linea_centrada = columnas_en_fila(
+            *para_hacer_linea,
+            alineaciones=[
+                centrar_linea
+                for _ in para_hacer_linea
+            ],
+            ancho_total=espacio
+        )
+        lineas_en_columnas.append(linea_centrada)
+        
+    return lineas_en_columnas
+
+
+def pantalla_agregado_centrada(tam_max_agregado: int,
+                               mensaje = 'agregar elementos', 
+                               transferencia: Union[list, tuple] = None):
+    if transferencia != None:
+        agregado = aplanar_lista(transferencia)
+        if len(agregado) == 0:
+            agregado = ['-']
+    else:
+        agregado = ['-']
+    i_fila_seleccion = 0
+    i_col_seleccion = 0
+    ultimo_tam_cols, ultimo_tam_filas = tam_consola()
+    if ultimo_tam_cols > TAM_MAX_COLS:
+            ultimo_tam_cols = TAM_MAX_COLS
+    if ultimo_tam_filas > TAM_MAX_FILAS:
+            ultimo_tam_filas = TAM_MAX_FILAS
+            
+    indicaciones = [
+        ('flech', 'moverse'),
+        ('Ctrl+A', 'agreg'),
+        ('Ctrl+X', 'elim'),
+        ('Retroc', 'borr'),
+        ('Ctrl+R', 'regresar'),
+    ]
+
+    __limpar_cli()
+    while True:
+        # Dividimos el agregado en filas para mostrarlo
+        tams_filas = sqrt(len(agregado))
+        if tams_filas < int(tams_filas):
+            tams_filas = int(tams_filas) + 1
+        else:
+            tams_filas = int(tams_filas)
+        agregado_ordenado = particionar(agregado, tams_filas, '-')
+        
+        filas_agregado = len(agregado_ordenado)
+        cols_agregado = max([len(fila) for fila in agregado_ordenado])
+        cols_terminal, filas_terminal = tam_consola()
+        if cols_terminal > TAM_MAX_COLS:
+            cols_terminal = TAM_MAX_COLS
+        if filas_terminal > TAM_MAX_FILAS:
+            filas_terminal = TAM_MAX_FILAS
+            
+        # Para hacer bucle de selecccion.
+        # Se llega al final regresa al comienzo y viceversa
+        if i_fila_seleccion > filas_agregado:
+            i_fila_seleccion = 0
+        elif i_fila_seleccion < 0:
+            i_fila_seleccion = filas_agregado
+        if i_col_seleccion > cols_agregado:
+            i_col_seleccion = 0
+        elif i_col_seleccion < 0:
+            i_col_seleccion = cols_agregado
+        
+
+        if (cols_terminal != ultimo_tam_cols) or (filas_terminal != ultimo_tam_filas):
+            ultimo_tam_cols = cols_terminal
+            ultimo_tam_filas = filas_terminal
+            __limpar_cli()
+            
+        titulo_formateado, len_titulo = titulo(mensaje, 2)
+        titulo_centrado = centrar_linea(titulo_formateado, 
+                                        cols_terminal, 
+                                        len_titulo)
+        encabezados = __formatear_encabezados(cols_terminal)
+        pie = __indicaciones_personalicadas(indicaciones, cols_terminal)
+        agregados_alineados = __centrar_agregados(
+            agregados=agregado_ordenado,
+            espacio=int(cols_terminal * .70),  # Se quiere el 70% del ancho de la consola
+            i_fila_sel=i_fila_seleccion,
+            i_col_sel=i_col_seleccion
+        )
+        agregados_centrados = list(map(
+            lambda linea: centrar_linea(linea, 
+                                        cols_terminal,
+                                        int(cols_terminal * .70)),
+            agregados_alineados
+        ))
+        pantalla_agregado = [
+            titulo_centrado,
+            '',
+            '',
+            *agregados_centrados
+        ]
+        pantalla_agregado_centrada = centrar_verticalmente('\n'.join(pantalla_agregado),
+                                                           filas_terminal - ENC_PIE)
+        print(encabezados, pantalla_agregado_centrada, pie)
+        
+        """ En esta parte se espera una tecla y se hace algo con el resultado """
+        tecla = __leer_tecla()
+        if tecla == Teclas().tec_flecha_ar:
+            i_fila_seleccion -= 1
+        elif tecla == Teclas().tec_flecha_ab:
+            i_fila_seleccion += 1
+        elif tecla == Teclas().tec_flecha_de:
+            i_col_seleccion += 1
+        elif tecla == Teclas().tec_flecha_iz:
+            i_col_seleccion -= 1
+        elif tecla == Teclas().com_ctrl_a:
+            agregado.append('-')
+            __limpar_cli()
+        elif tecla == Teclas().com_ctrl_x:
+            if len(agregado) > 0:
+                i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+                agregado.pop(i_original)
+            __limpar_cli()       
+        elif tecla in LETRAS:
+            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+            if len(agregado[i_original]) < tam_max_agregado:
+                agregado[i_original] += LETRAS_DIC[tecla]
+        elif tecla in NUMEROS:
+            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+            if len(agregado[i_original]) < tam_max_agregado:
+                agregado[i_original] += NUMEROS_DIC[tecla]
+        elif tecla == Teclas().tec_retroceso:
+            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+            if len(agregado[i_original]) > 0:
+                agregado[i_original] = agregado[i_original][:-1]  # Se le quita el ultimo caracter
+        elif tecla == Teclas().com_ctrl_r or tecla == Teclas().com_ctrl_c:
+            __limpar_cli()
+            return aplanar_lista(agregado)
+    
         regresar_cursor_inicio_pantalla()
 
 
