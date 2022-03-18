@@ -15,13 +15,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .utiles import aplanar_lista, limpiar_pantalla, regresar_cursor_inicio_pantalla, tam_consola
+from .utiles import aplanar_lista, limpiar_pantalla, particion_arbitraria, regresar_cursor_inicio_pantalla, tam_consola
 from .esquemas import Teclas, Opcion, LETRAS, NUMEROS, LETRAS_DIC, NUMEROS_DIC
 from .utiles import particionar
 from .getch import getch
 
 from typing import List, Tuple, Union
-from colorama import Style, Back, Fore
+from colorama import Style, Back, Fore, Cursor, init
+init()
 from math import sqrt
 
 
@@ -39,7 +40,7 @@ def error(texto: str, msj: str = ' ERR'):
     return f'{pre} {Style.BRIGHT}{Fore.RED}{texto}{Style.RESET_ALL}', ancho_real
 
 
-def correcto(texto: str, msj: str = 'CORR'):
+def correcto(texto: str, msj: str = '  OK'):
     ancho_real = f'{msj} {texto}'.__len__()
     pre = f'{Style.BRIGHT}{Back.GREEN}{Style.NORMAL}{Fore.BLACK}{msj}{Style.RESET_ALL}'
     return f'{pre} {Style.BRIGHT}{Fore.GREEN}{texto}{Style.RESET_ALL}', ancho_real
@@ -49,6 +50,13 @@ def seleccion(texto: str, cursor: str):
     ancho_real = f'{cursor} {texto}'.__len__()
     pre, _ = sub_titulo(cursor)
     seleccionado = f'{Style.BRIGHT}{Fore.BLUE}{texto}{Style.RESET_ALL}'
+    return f'{pre} {seleccionado}', ancho_real
+
+
+def seleccion_modificable(texto: str, cursor: str):
+    ancho_real = f'{cursor} {texto}{CARET}'.__len__()
+    pre, _ = sub_titulo(cursor)
+    seleccionado = f'{Style.BRIGHT}{Fore.BLUE}{texto}{Style.RESET_ALL}{CARET}'
     return f'{pre} {seleccionado}', ancho_real
 
 
@@ -77,6 +85,10 @@ def log(texto: str, trazo: str):
     pre = f'{izq}{dentro}{der}'
     return f'{pre} {texto}', ancho_real
 
+def comentario(texto: str):
+    ancho_real = texto.__len__()
+    return f'{Style.BRIGHT}{Fore.LIGHTBLACK_EX}{texto}{Style.RESET_ALL}', ancho_real
+
 
 CURSOR = '>'
 ESC_CODE = '\x1b'
@@ -88,6 +100,8 @@ MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
 TAM_MAX_COLS = 187
 TAM_MAX_FILAS = 44
+MSJ_VACIO = 'escribe'
+CARET = '│'
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -363,8 +377,13 @@ def __centrar_agregados(agregados, espacio, i_fila_sel, i_col_sel):
     for i_fila, fila in enumerate(agregados):
         para_hacer_linea = []
         for i_col, col in enumerate(fila):
-            if (i_fila, i_col) == (i_fila_sel, i_col_sel):
-                nueva_col = seleccion(col, CURSOR)
+            if col == '' and not ((i_fila, i_col) == (i_fila_sel, i_col_sel)):
+                nueva_col = comentario(MSJ_VACIO)
+            elif (i_fila, i_col) == (i_fila_sel, i_col_sel):
+                if col == '':
+                    nueva_col = seleccion(MSJ_VACIO, CURSOR)
+                else:
+                    nueva_col = seleccion_modificable(col, CURSOR)
             else:
                 nueva_col = tuple([col, len(col)])
             para_hacer_linea.append(nueva_col)
@@ -385,11 +404,11 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                mensaje = 'agregar elementos', 
                                transferencia: Union[list, tuple] = None):
     if transferencia != None:
-        agregado = aplanar_lista(transferencia)
+        agregado = transferencia
         if len(agregado) == 0:
-            agregado = ['-']
+            agregado.append('')
     else:
-        agregado = ['-']
+        agregado = ['']
     i_fila_seleccion = 0
     i_col_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
@@ -408,14 +427,35 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
 
     __limpar_cli()
     while True:
-        # Dividimos el agregado en filas para mostrarlo
-        tams_filas = sqrt(len(agregado))
+        # Se calcula el tam. de cada fila para la representacion
+        # grafica.
+        agregado_modificable = list(agregado)
+        tams_filas = sqrt(len(agregado_modificable))
         if tams_filas < int(tams_filas):
             tams_filas = int(tams_filas) + 1
         else:
             tams_filas = int(tams_filas)
-        agregado_ordenado = particionar(agregado, tams_filas, '-')
+        tams_reales_filas = []
+        tam_agregado = len(agregado_modificable)
         
+        # Se crean los tam de cada fila.
+        while tam_agregado > tams_filas:
+            tam_agregado -= tams_filas
+            tams_reales_filas.append(tams_filas)
+            
+        # Si sobra, significa que una fila sera menor, y se agrega el
+        # sobrane para que se cree dicha fila.
+        if tam_agregado > 0:
+            tams_reales_filas.append(tam_agregado)
+            
+        # Se crea una particion arbitraria, que es una particion en el
+        # que se decide el tam. de cada parte individualmente.
+        # El tam de cada parte esta en "tams_reales_filas", y se pasa
+        # con el operador * porque el argumento partes puede recibir
+        # n cantidad de enteros; asi recibe cada entero individualmente.
+        agregado_ordenado = particion_arbitraria(agregado_modificable, 
+                                                 *tams_reales_filas)
+                
         filas_agregado = len(agregado_ordenado)
         cols_agregado = max([len(fila) for fila in agregado_ordenado])
         cols_terminal, filas_terminal = tam_consola()
@@ -435,7 +475,8 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         elif i_col_seleccion < 0:
             i_col_seleccion = cols_agregado
         
-
+        # Si cambia el tam. de la terminal, se limpia por completo
+        # para que no queden rastros de la visualizacion anterior.
         if (cols_terminal != ultimo_tam_cols) or (filas_terminal != ultimo_tam_filas):
             ultimo_tam_cols = cols_terminal
             ultimo_tam_filas = filas_terminal
@@ -480,7 +521,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         elif tecla == Teclas().tec_flecha_iz:
             i_col_seleccion -= 1
         elif tecla == Teclas().com_ctrl_a:
-            agregado.append('-')
+            agregado.append('')
             __limpar_cli()
         elif tecla == Teclas().com_ctrl_x:
             if len(agregado) > 0:
@@ -501,7 +542,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                 agregado[i_original] = agregado[i_original][:-1]  # Se le quita el ultimo caracter
         elif tecla == Teclas().com_ctrl_r or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
-            return aplanar_lista(agregado)
+            return agregado
     
         regresar_cursor_inicio_pantalla()
 
