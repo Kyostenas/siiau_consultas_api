@@ -15,15 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .utiles import aplanar_lista, limpiar_pantalla, particion_arbitraria, regresar_cursor_inicio_pantalla, tam_consola
+from .utiles import (limpiar_pantalla, 
+                     regresar_cursor_inicio_pantalla, 
+                     tam_consola,
+                     particion_arbitraria)
 from .esquemas import Teclas, Opcion, LETRAS, NUMEROS, LETRAS_DIC, NUMEROS_DIC
-from .utiles import particionar
 from .getch import getch
 
+from colorama import Style, Back, Fore, init
 from typing import List, Tuple, Union
-from colorama import Style, Back, Fore, Cursor, init
-init()
 from math import sqrt
+init()  # Para que colorama funcione en Windows
 
 
 # TODO mejorar nombres de estilos de texto para que no conflictuen con variables
@@ -102,6 +104,7 @@ TAM_MAX_COLS = 187
 TAM_MAX_FILAS = 44
 MSJ_VACIO = 'escribe'
 CARET = '│'
+MSJ_SIN_ELEMENTOS = 'No hay elementos para mostrar'
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -400,15 +403,32 @@ def __centrar_agregados(agregados, espacio, i_fila_sel, i_col_sel):
     return lineas_en_columnas
 
 
+def __centrar_formatear_noticia(noticia: str, espacio: int, formato) -> str:
+    """
+    Solo debe recibir:
+    
+    noticia: "cualquier cadena de texto"
+    espacio: 1-n
+    formato: advertencia | error | correcto
+    
+    ** espacio recibe cualquier numero del 1 en adelante
+    ** formato recibe funciones sin callback
+    """
+    formateada, tam = formato(noticia)
+    centrada = centrar_linea(formateada, espacio, tam)
+    
+    return centrada
+
+
 def pantalla_agregado_centrada(tam_max_agregado: int,
-                               mensaje = 'agregar elementos', 
+                               lim_cant_agregados: int,
+                               mensaje = 'agregar elementos',
+                               nombre_elemento = 'elemento',
                                transferencia: Union[list, tuple] = None):
     if transferencia != None:
         agregado = transferencia
-        if len(agregado) == 0:
-            agregado.append('')
     else:
-        agregado = ['']
+        agregado = []
     i_fila_seleccion = 0
     i_col_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
@@ -424,9 +444,21 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         ('Retroc', 'borr'),
         ('Ctrl+R', 'regresar'),
     ]
+    
+    advertencias = []
+    errores = []
+    correctos = []
+    
+    ultima_cantidad_de_noticias = 0
+    nueva_cantidad_de_noticias = 0
 
     __limpar_cli()
     while True:
+        
+        if nueva_cantidad_de_noticias != ultima_cantidad_de_noticias:
+            ultima_cantidad_de_noticias = nueva_cantidad_de_noticias
+            __limpar_cli()
+        
         # Se calcula el tam. de cada fila para la representacion
         # grafica.
         agregado_modificable = list(agregado)
@@ -455,17 +487,40 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         # n cantidad de enteros; asi recibe cada entero individualmente.
         agregado_ordenado = particion_arbitraria(agregado_modificable, 
                                                  *tams_reales_filas)
-                
-        filas_agregado = len(agregado_ordenado)
-        cols_agregado = max([len(fila) for fila in agregado_ordenado])
+        
         cols_terminal, filas_terminal = tam_consola()
         if cols_terminal > TAM_MAX_COLS:
             cols_terminal = TAM_MAX_COLS
         if filas_terminal > TAM_MAX_FILAS:
             filas_terminal = TAM_MAX_FILAS
-            
+
+        if len(agregado_modificable) > 0:
+            filas_agregado = len(agregado_ordenado)
+            cols_agregado = max([len(fila) for fila in agregado_ordenado])
+            agregados_alineados = __centrar_agregados(
+                agregados=agregado_ordenado,
+                espacio=int(cols_terminal * .70),  # Se quiere el 70% del ancho de la consola
+                i_fila_sel=i_fila_seleccion,
+                i_col_sel=i_col_seleccion
+            )
+            agregados_centrados = list(map(
+                lambda linea: centrar_linea(linea, 
+                                            cols_terminal,
+                                            int(cols_terminal * .70)),
+                agregados_alineados
+            ))
+        else :
+            filas_agregado = 0
+            cols_agregado = 0
+            agregados_centrados = [centrar_linea(MSJ_SIN_ELEMENTOS, cols_terminal,
+                                                 len(MSJ_SIN_ELEMENTOS))]
+        
+        encabezados = __formatear_encabezados(cols_terminal)
+        pie = __indicaciones_personalicadas(indicaciones, cols_terminal)
+        
         # Para hacer bucle de selecccion.
         # Se llega al final regresa al comienzo y viceversa
+        # FIX arreglar bucle de seleccion
         if i_fila_seleccion > filas_agregado:
             i_fila_seleccion = 0
         elif i_fila_seleccion < 0:
@@ -481,34 +536,58 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             ultimo_tam_cols = cols_terminal
             ultimo_tam_filas = filas_terminal
             __limpar_cli()
-            
+        
         titulo_formateado, len_titulo = titulo(mensaje, 2)
         titulo_centrado = centrar_linea(titulo_formateado, 
                                         cols_terminal, 
                                         len_titulo)
-        encabezados = __formatear_encabezados(cols_terminal)
-        pie = __indicaciones_personalicadas(indicaciones, cols_terminal)
-        agregados_alineados = __centrar_agregados(
-            agregados=agregado_ordenado,
-            espacio=int(cols_terminal * .70),  # Se quiere el 70% del ancho de la consola
-            i_fila_sel=i_fila_seleccion,
-            i_col_sel=i_col_seleccion
-        )
-        agregados_centrados = list(map(
-            lambda linea: centrar_linea(linea, 
-                                        cols_terminal,
-                                        int(cols_terminal * .70)),
-            agregados_alineados
+        # Noticias de errores, advertencias o ejecuciones correctas
+        advertencias_centradas = tuple(map(
+            lambda noticia: __centrar_formatear_noticia(
+                noticia, 
+                cols_terminal,
+                advertencia
+            ),
+            advertencias
         ))
+        errores_centrados = tuple(map(
+            lambda noticia: __centrar_formatear_noticia(
+                noticia, 
+                cols_terminal,
+                error
+            ),
+            errores
+        ))
+        correctos_centrados = tuple(map(
+            lambda noticia: __centrar_formatear_noticia(
+                noticia, 
+                cols_terminal,
+                correcto
+            ),
+            correctos
+        ))
+
         pantalla_agregado = [
             titulo_centrado,
             '',
             '',
-            *agregados_centrados
+            *agregados_centrados,
+            '',
+            *correctos_centrados,
+            *advertencias_centradas,
+            *errores_centrados
         ]
         pantalla_agregado_centrada = centrar_verticalmente('\n'.join(pantalla_agregado),
                                                            filas_terminal - ENC_PIE)
         print(encabezados, pantalla_agregado_centrada, pie)
+        print(nueva_cantidad_de_noticias, ultima_cantidad_de_noticias)
+        
+        # Se limpian las noticias para que no se muesten de nuevo cuando ya
+        # no se necesitan mas
+        correctos.clear()
+        advertencias.clear()
+        errores.clear()
+        nueva_cantidad_de_noticias = 0
         
         """ En esta parte se espera una tecla y se hace algo con el resultado """
         tecla = __leer_tecla()
@@ -521,29 +600,51 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         elif tecla == Teclas().tec_flecha_iz:
             i_col_seleccion -= 1
         elif tecla == Teclas().com_ctrl_a:
-            agregado.append('')
+            if len(agregado) < lim_cant_agregados:
+                agregado.append('')
+                correctos.append(f'Nuevo espacio para {nombre_elemento} creado.')
+                if len(agregado) == (lim_cant_agregados - 1):
+                    advertencias.append(f'Acercandose al limite ({lim_cant_agregados})')
+                if len(agregado) == lim_cant_agregados:
+                    advertencias.append(f'Has alcanzado el limite de {nombre_elemento}s'
+                                       f' ({lim_cant_agregados})')
+            else:
+                if lim_cant_agregados == 1:
+                    final = ''
+                else:
+                    final = 's'
+                errores.append(f'Solo puedes agregar {lim_cant_agregados}'
+                                    f' {nombre_elemento}{final}')
             __limpar_cli()
         elif tecla == Teclas().com_ctrl_x:
             if len(agregado) > 0:
                 i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
-                agregado.pop(i_original)
-            __limpar_cli()       
-        elif tecla in LETRAS:
-            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
-            if len(agregado[i_original]) < tam_max_agregado:
-                agregado[i_original] += LETRAS_DIC[tecla]
-        elif tecla in NUMEROS:
-            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
-            if len(agregado[i_original]) < tam_max_agregado:
-                agregado[i_original] += NUMEROS_DIC[tecla]
-        elif tecla == Teclas().tec_retroceso:
-            i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
-            if len(agregado[i_original]) > 0:
-                agregado[i_original] = agregado[i_original][:-1]  # Se le quita el ultimo caracter
+                eliminado = agregado.pop(i_original)
+                if eliminado == '':
+                    correctos.append(f'Espacio vacio eliminado correctamente.')
+                else:
+                    correctos.append(f'{eliminado} eliminado correctamente.')
+            else:
+                errores.append(f'No hay nada que borrar')
+            __limpar_cli()
         elif tecla == Teclas().com_ctrl_r or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
             return agregado
-    
+        if len(agregado) > 0:
+            if tecla in LETRAS:
+                i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+                if len(agregado[i_original]) < tam_max_agregado:
+                    agregado[i_original] += LETRAS_DIC[tecla]
+            elif tecla in NUMEROS:
+                i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+                if len(agregado[i_original]) < tam_max_agregado:
+                    agregado[i_original] += NUMEROS_DIC[tecla]
+            elif tecla == Teclas().tec_retroceso:
+                i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
+                if len(agregado[i_original]) > 0:
+                    agregado[i_original] = agregado[i_original][:-1]  # Se le quita el ultimo caracter
+
+        nueva_cantidad_de_noticias += len(errores) + len(advertencias) + len(correctos)
         regresar_cursor_inicio_pantalla()
 
 
