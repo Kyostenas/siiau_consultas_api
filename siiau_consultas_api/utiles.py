@@ -75,7 +75,7 @@ def aplanar_lista(tf, i=0, c=0) -> list:
             return aplanar_lista(tf, i + 1, c)
     else:
         return tf
-
+    
 
 def particionar(lista, tam_rebanada, relleno=None, retornar_tuplas=True) -> list:
     """
