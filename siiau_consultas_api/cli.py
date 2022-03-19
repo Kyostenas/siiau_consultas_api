@@ -497,9 +497,25 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             cols_terminal = TAM_MAX_COLS
         if filas_terminal > TAM_MAX_FILAS:
             filas_terminal = TAM_MAX_FILAS
+        
+        # Para hacer bucle de selecccion.
+        # Se llega al final regresa al comienzo y viceversa
+        # FIX arreglar bucle de seleccion
+        tam_agregado_ordenado = len(agregado_ordenado) - 1
+        if i_fila_seleccion > tam_agregado_ordenado:
+            i_fila_seleccion = 0
+        elif i_fila_seleccion < 0:
+            i_fila_seleccion = tam_agregado_ordenado
+        try:
+            tam_fila_seleccionada = len(agregado_ordenado[i_fila_seleccion]) - 1
+        except IndexError:
+            tam_fila_seleccionada = 0
+        if i_col_seleccion > tam_fila_seleccionada:
+            i_col_seleccion = 0
+        elif i_col_seleccion < 0:
+            i_col_seleccion = tam_fila_seleccionada
 
         if len(agregado_modificable) > 0:
-            filas_agregado = len(agregado_ordenado)
             cols_agregado = max([len(fila) for fila in agregado_ordenado])
             agregados_alineados = __centrar_agregados(
                 agregados=agregado_ordenado,
@@ -514,25 +530,12 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                 agregados_alineados
             ))
         else :
-            filas_agregado = 0
             cols_agregado = 0
             agregados_centrados = [centrar_linea(MSJ_SIN_ELEMENTOS, cols_terminal,
                                                  len(MSJ_SIN_ELEMENTOS))]
         
         encabezados = __formatear_encabezados(cols_terminal)
         pie = __indicaciones_personalicadas(indicaciones, cols_terminal)
-        
-        # Para hacer bucle de selecccion.
-        # Se llega al final regresa al comienzo y viceversa
-        # FIX arreglar bucle de seleccion
-        if i_fila_seleccion > filas_agregado:
-            i_fila_seleccion = 0
-        elif i_fila_seleccion < 0:
-            i_fila_seleccion = filas_agregado
-        if i_col_seleccion > cols_agregado:
-            i_col_seleccion = 0
-        elif i_col_seleccion < 0:
-            i_col_seleccion = cols_agregado
         
         # Si cambia el tam. de la terminal, se limpia por completo
         # para que no queden rastros de la visualizacion anterior.
@@ -605,7 +608,21 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         """ En esta parte se espera una tecla y se hace algo con el resultado """
         tecla = __leer_tecla()
         if tecla == Teclas().tec_flecha_ar:
+            # Esto hace que la seleccion queda centrada si esta seleccionada una
+            # fila con un elemento, y se mueve el cursor hacia una fila de mas de
+            # dos elementos. Lo logico seria que el cursor siguiera en el centro
+            # y no se fuera hacia un lado.
+            try:
+                tam_seleccion_arriba = len(agregado_ordenado[i_fila_seleccion - 1])
+                if tam_fila_seleccionada < tam_seleccion_arriba:
+                    i_col_seleccion = tam_seleccion_arriba // 2
+            except IndexError:
+                pass
+
+            # Despues de la comprobacion anterior, se indica el cambio del cursor
+            # hacia la fila de arriba (si es que existe)
             i_fila_seleccion -= 1
+            
         elif tecla == Teclas().tec_flecha_ab:
             i_fila_seleccion += 1
         elif tecla == Teclas().tec_flecha_de:
