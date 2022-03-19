@@ -500,7 +500,6 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         
         # Para hacer bucle de selecccion.
         # Se llega al final regresa al comienzo y viceversa
-        # FIX arreglar bucle de seleccion
         tam_agregado_ordenado = len(agregado_ordenado) - 1
         if i_fila_seleccion > tam_agregado_ordenado:
             i_fila_seleccion = 0
