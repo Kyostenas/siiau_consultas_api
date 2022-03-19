@@ -105,6 +105,7 @@ TAM_MAX_FILAS = 44
 MSJ_VACIO = 'escribe'
 CARET = '│'
 MSJ_SIN_ELEMENTOS = 'No hay elementos para mostrar'
+ESP_EXTRA_NOTICIAS = 5
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -403,7 +404,8 @@ def __centrar_agregados(agregados, espacio, i_fila_sel, i_col_sel):
     return lineas_en_columnas
 
 
-def __centrar_formatear_noticia(noticia: str, espacio: int, formato) -> str:
+def __centrar_formatear_noticia(noticia: str, espacio: int, 
+                                max_len_noticias: int, formato) -> str:
     """
     Solo debe recibir:
     
@@ -414,8 +416,10 @@ def __centrar_formatear_noticia(noticia: str, espacio: int, formato) -> str:
     ** espacio recibe cualquier numero del 1 en adelante
     ** formato recibe funciones sin callback
     """
+    espacio_alineado = max_len_noticias + ESP_EXTRA_NOTICIAS
     formateada, tam = formato(noticia)
-    centrada = centrar_linea(formateada, espacio, tam)
+    alinieada_izquierda = alinear_linea_izquierda(formateada, espacio_alineado, tam)
+    centrada = centrar_linea(alinieada_izquierda, espacio, espacio_alineado)
     
     return centrada
 
@@ -541,11 +545,18 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         titulo_centrado = centrar_linea(titulo_formateado, 
                                         cols_terminal, 
                                         len_titulo)
+        
         # Noticias de errores, advertencias o ejecuciones correctas
+        todas_las_noticias = advertencias + errores + correctos
+        if len(todas_las_noticias) == 0:
+            noticia_mas_grande = 0
+        else:    
+            noticia_mas_grande = max(list(map(len, todas_las_noticias)))
         advertencias_centradas = tuple(map(
             lambda noticia: __centrar_formatear_noticia(
                 noticia, 
                 cols_terminal,
+                noticia_mas_grande,
                 advertencia
             ),
             advertencias
@@ -554,6 +565,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             lambda noticia: __centrar_formatear_noticia(
                 noticia, 
                 cols_terminal,
+                noticia_mas_grande,
                 error
             ),
             errores
@@ -562,6 +574,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             lambda noticia: __centrar_formatear_noticia(
                 noticia, 
                 cols_terminal,
+                noticia_mas_grande,
                 correcto
             ),
             correctos
@@ -573,6 +586,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             '',
             *agregados_centrados,
             '',
+            '',
             *correctos_centrados,
             *advertencias_centradas,
             *errores_centrados
@@ -580,7 +594,6 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         pantalla_agregado_centrada = centrar_verticalmente('\n'.join(pantalla_agregado),
                                                            filas_terminal - ENC_PIE)
         print(encabezados, pantalla_agregado_centrada, pie)
-        print(nueva_cantidad_de_noticias, ultima_cantidad_de_noticias)
         
         # Se limpian las noticias para que no se muesten de nuevo cuando ya
         # no se necesitan mas
