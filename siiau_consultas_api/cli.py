@@ -24,6 +24,7 @@ from .getch import getch
 
 from colorama import Style, Back, Fore, init
 from typing import List, Tuple, Union
+from tabulate import tabulate
 from math import sqrt
 init()  # Para que colorama funcione en Windows
 
@@ -548,7 +549,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                         cols_terminal, 
                                         len_titulo)
         
-        # Noticias de errores, advertencias o ejecuciones correctas
+        # Noticias de errores, advertencias o ejecuciones correctas.
         todas_las_noticias = advertencias + errores + correctos
         if len(todas_las_noticias) == 0:
             noticia_mas_grande = 0
@@ -598,7 +599,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         print(encabezados, pantalla_agregado_centrada, pie)
         
         # Se limpian las noticias para que no se muesten de nuevo cuando ya
-        # no se necesitan mas
+        # no se necesitan mas.
         correctos.clear()
         advertencias.clear()
         errores.clear()
@@ -612,22 +613,41 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # dos elementos. Lo logico seria que el cursor siguiera en el centro
             # y no se fuera hacia un lado.
             try:
-                tam_seleccion_arriba = len(agregado_ordenado[i_fila_seleccion - 1])
+                tam_seleccion_arriba = len(agregado_ordenado[i_fila_seleccion - 1]) - 1
+                tam_fila_seleccionada = len(agregado_modificable[i_fila_seleccion]) - 1
                 if tam_fila_seleccionada < tam_seleccion_arriba:
                     i_col_seleccion = tam_seleccion_arriba // 2
             except IndexError:
                 pass
 
             # Despues de la comprobacion anterior, se indica el cambio del cursor
-            # hacia la fila de arriba (si es que existe)
+            # hacia la fila de arriba (si es que existe).
             i_fila_seleccion -= 1
             
         elif tecla == Teclas().tec_flecha_ab:
+            # Del mismo modo que en la opcion de flecha arriba, si el cursor esta 
+            # en una fila de menor tam. que la de arriba y se mueve hacia abajo
+            # (siendo esta fila la ultima de abajo), el cursor regresa a la primera
+            # fila, y es logico que lo haga en el centro o, por lo menos, es lo que
+            # se sentiria mas natural. 
+            try:
+                tam_primera_fila = len(agregado_ordenado[0]) - 1
+                tam_fila_seleccionada = len(agregado_modificable[i_fila_seleccion]) - 1
+                if tam_fila_seleccionada < tam_primera_fila:
+                    i_col_seleccion = tam_primera_fila // 2
+            except IndexError:
+                pass
+            
+            # Despues de la comprobacion anterior, se indica el cambio del cursor
+            # hacia la fila de abajo (si es que existe).
             i_fila_seleccion += 1
+            
         elif tecla == Teclas().tec_flecha_de:
             i_col_seleccion += 1
         elif tecla == Teclas().tec_flecha_iz:
             i_col_seleccion -= 1
+            
+        # FIX cursor siempre se va a la derecha en ultima columna de izquierda al moverser vert.
         elif tecla == Teclas().com_ctrl_a:
             if len(agregado) < lim_cant_agregados:
                 agregado.append('')
