@@ -23,12 +23,12 @@ from .esquemas import Opcion
 # TODO Agregar interfaz para uso en consola
 
 
-def __agregar_materias_para_consultar(transferencia = {}):
+def __agregar_materias_para_consultar(transferencia):
     try:
         transferencia = transferencia['__agregar_materias_para_consultar']
     except KeyError:
         transferencia = []
-    transferencia = pantalla_para_agregar(7, 'agregar claves de materia', transferencia)
+    transferencia = pantalla_para_agregar(7, 15, 'agregar materias', 'clave', transferencia)
     return transferencia
 
 
@@ -60,7 +60,7 @@ def menu_principal():
         Opcion('registrar materias', str),
     ]
     menu_gen(opciones, True, titulo_menu)
-    
+
 
 if __name__ == '__main__':
     menu_principal()
