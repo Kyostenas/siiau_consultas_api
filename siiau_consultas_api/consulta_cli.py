@@ -23,16 +23,19 @@ from .esquemas import Opcion
 # TODO Agregar interfaz para uso en consola
 
 
-def __agregar_materias_para_consultar(transferencia):
-    try:
-        transferencia = transferencia['__agregar_materias_para_consultar']
-    except KeyError:
-        transferencia = []
-    transferencia = pantalla_para_agregar(7, 15, 'agregar materias', 'clave', transferencia)
-    return transferencia
+def __agregar_materias_para_consultar(transferencia_memoria):
+    if transferencia_memoria is None:
+        transferencia_memoria = []
+    transferencia_memoria = pantalla_para_agregar(
+        7, 15, 'agregar materias', 'clave', transferencia_memoria
+    )
+    
+    return transferencia_memoria
 
 
-def __menu_consultar_oferta():
+def __menu_consultar_oferta(transferencia_memoria):
+    if transferencia_memoria is None:
+        transferencia_memoria = {}
     titulo_menu = 'consultar oferta'
     sub_titulo_menu = 'consulta y procesa la oferta academica'
     opciones = [
@@ -42,9 +45,9 @@ def __menu_consultar_oferta():
         Opcion('ver clases', str),
         Opcion('generar posibles horarios', str),
     ]
-    returno = menu_gen(opciones, False, titulo_menu, sub_titulo_menu)
-    print(returno)
-    exit()
+    transferencia_memoria = menu_gen(opciones, False, titulo_menu, sub_titulo_menu, transferencia_memoria)
+
+    return transferencia_memoria
 
 
 def menu_principal():
@@ -59,7 +62,10 @@ def menu_principal():
         Opcion('consultar mis carreras', str),
         Opcion('registrar materias', str),
     ]
-    menu_gen(opciones, True, titulo_menu)
+    
+    retorno_final = menu_gen(opciones, True, titulo_menu)
+    
+    exit(print(retorno_final))
 
 
 if __name__ == '__main__':

@@ -290,8 +290,15 @@ def __leer_tecla():
 
 
 def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
-                            titulo_menu: str = 'MENU', subtitulo_menu: str = None):
-    resultados_ejecuciones = {}
+                            titulo_menu: str = 'MENU', subtitulo_menu: str = None,
+                            transferencia_memoria: dict = None):
+    
+    # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
+    if transferencia_memoria != None:
+        cache_ejecuciones_temporal = transferencia_memoria
+    else:
+        cache_ejecuciones_temporal = {}
+        
     i_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
     if ultimo_tam_cols > TAM_MAX_COLS:
@@ -349,30 +356,38 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
             i_seleccion += 1
         elif tecla == Teclas().tec_enter:
             __limpar_cli()
-            funcion_obtenida = opciones[i_seleccion].funcion  # Se obtiene la funcion
-            nombre_funcion = funcion_obtenida.__name__  # Se obtiene el nombre como cadena
+            funcion_obtenida = opciones[i_seleccion].funcion  # Se obtiene la funcion.
+            nombre_funcion = funcion_obtenida.__name__  # Se obtiene el nombre como cadena.
             try:
                 # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
-                # la transferencia (resultados anteriores de otras ejecuciones)
-                retorno_funcion = funcion_obtenida(transferencia=resultados_ejecuciones)
+                # la transferencia (resultados anteriores de otras ejecuciones).
+                try:
+                    retorno_funcion = funcion_obtenida(
+                        transferencia_memoria=cache_ejecuciones_temporal[nombre_funcion]
+                    )
+                except KeyError:
+                    # Si aun no se ha ejecutado nada, no habra un resultado de ejecucion
+                    # y no existira la llave de dicho resultado. Cuando eso pasa, se crea la
+                    # llave requerida y se manda con None.
+                    cache_ejecuciones_temporal[nombre_funcion] = None
+                    retorno_funcion = funcion_obtenida(
+                        transferencia_memoria=cache_ejecuciones_temporal[nombre_funcion]
+                    )
             except TypeError:
-                # Se ejecuta la funcion guardada en esa opcion
+                # Se ejecuta la funcion guardada en esa opcion.
                 retorno_funcion = funcion_obtenida()  
 
-            # Se guarda el resultado de la funcion en un diccionario
-            try:            
-                resultados_ejecuciones[nombre_funcion].append(retorno_funcion)
-            except:
-                resultados_ejecuciones[nombre_funcion] = [retorno_funcion]
+            # Se guarda el resultado de la funcion en un diccionario.
+            cache_ejecuciones_temporal[nombre_funcion] = retorno_funcion
                 
             __limpar_cli()
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
-            if principal:  # Si es principal, y se aprieta salir, cierra el programa
+            if principal:  # Si es principal, y se aprieta salir, cierra el programa.
                 print('Hasta luego')
-                exit()
+                return cache_ejecuciones_temporal
             else:  # Si no es principal, se sale del menu
-                return resultados_ejecuciones
+                return cache_ejecuciones_temporal
 
         regresar_cursor_inicio_pantalla()
         
@@ -429,9 +444,9 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                lim_cant_agregados: int,
                                mensaje = 'agregar elementos',
                                nombre_elemento = 'elemento',
-                               transferencia: Union[list, tuple] = None):
-    if transferencia != None:
-        agregado = transferencia
+                               transferencia_memoria: Union[list, tuple] = None):
+    if transferencia_memoria != None:
+        agregado = transferencia_memoria
     else:
         agregado = []
     i_fila_seleccion = 0
