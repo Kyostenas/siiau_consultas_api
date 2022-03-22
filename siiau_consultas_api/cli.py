@@ -595,7 +595,8 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             *errores_centrados
         ]
         pantalla_agregado_centrada = centrar_verticalmente('\n'.join(pantalla_agregado),
-                                                           filas_terminal - ENC_PIE)
+                                                           filas_terminal - ENC_PIE,
+                                                           correccion=3)
         print(encabezados, pantalla_agregado_centrada, pie)
         
         # Se limpian las noticias para que no se muesten de nuevo cuando ya
@@ -614,7 +615,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # y no se fuera hacia un lado.
             try:
                 tam_seleccion_arriba = len(agregado_ordenado[i_fila_seleccion - 1]) - 1
-                tam_fila_seleccionada = len(agregado_modificable[i_fila_seleccion]) - 1
+                tam_fila_seleccionada = len(agregado_ordenado[i_fila_seleccion]) - 1
                 if tam_fila_seleccionada < tam_seleccion_arriba:
                     i_col_seleccion = tam_seleccion_arriba // 2
             except IndexError:
@@ -632,7 +633,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # se sentiria mas natural. 
             try:
                 tam_primera_fila = len(agregado_ordenado[0]) - 1
-                tam_fila_seleccionada = len(agregado_modificable[i_fila_seleccion]) - 1
+                tam_fila_seleccionada = len(agregado_ordenado[i_fila_seleccion]) - 1
                 if tam_fila_seleccionada < tam_primera_fila:
                     i_col_seleccion = tam_primera_fila // 2
             except IndexError:
@@ -647,7 +648,6 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         elif tecla == Teclas().tec_flecha_iz:
             i_col_seleccion -= 1
             
-        # FIX cursor siempre se va a la derecha en ultima columna de izquierda al moverser vert.
         elif tecla == Teclas().com_ctrl_a:
             if len(agregado) < lim_cant_agregados:
                 agregado.append('')
