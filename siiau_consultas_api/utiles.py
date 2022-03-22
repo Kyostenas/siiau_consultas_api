@@ -33,14 +33,10 @@ VALORES_CICLOS = {
     'B': '20'
 }
 
-# Código cortesía de John Machin 
-# https://stackoverflow.com/questions/2186919/getting-correct-string-length-in-python-for-strings-with-ansi-color-codes
-SECUENCIAS_ANSI = re.compile(r"""
-    \x1b     # Literal ESC
-    \[       # Literal [
-    [;\d]*   # 0 o más digitos o punto y coma
-    [A-Za-a] # Una letra
-    """, re.VERBOSE)
+# Busca las secuencias de color ANSI que se ven como:
+#   \x1b[47m
+# Estas son las que maneja colorama, utilizado en el cli.
+ELIMINADOR_ANSI = re.compile(r'\x1b\[[\d]*m')
 
 
 def convertir_ciclo_a_entero(ciclo: str) -> int:
@@ -226,15 +222,22 @@ def print_actualizable(*cadenas, sep=' ') -> None:
     print(*cadenas, sep=sep, end='\r', flush=True)
 
 
-# Código cortesía de John Machin 
-# https://stackoverflow.com/questions/2186919/getting-correct-string-length-in-python-for-strings-with-ansi-color-codes
 def limpiar_secuencias_ANSI(cadena):
     """
     Limpia todas las secuencias ANSI de una cadena de texto.
     """
-    return re.sub(SECUENCIAS_ANSI, '', cadena)
+    return ELIMINADOR_ANSI.sub('', cadena)
+    #          ^                ^       ^     
+    # Buscador de               |       |
+    # coincidencias             |       | 
+    #                           |       |     
+    # La cadena que reemplaza --+       |
+    # las coincidencias                 |
+    #                                   |
+    # La cadena que sera limpiada ------+
 
 
 def tam_consola() -> Tuple[int, int]:
     cols_terminal, filas_terminal = os.get_terminal_size()
     return cols_terminal, filas_terminal
+
