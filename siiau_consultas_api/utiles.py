@@ -222,19 +222,19 @@ def print_actualizable(*cadenas, sep=' ') -> None:
     print(*cadenas, sep=sep, end='\r', flush=True)
 
 
-def limpiar_secuencias_ANSI(cadena):
+def limpiar_secuencias_ANSI(cadena, reemplazo=''):
     """
     Limpia todas las secuencias ANSI de una cadena de texto.
     """
-    return ELIMINADOR_ANSI.sub('', cadena)
-    #          ^                ^       ^     
-    # Buscador de               |       |
-    # coincidencias             |       | 
-    #                           |       |     
-    # La cadena que reemplaza --+       |
-    # las coincidencias                 |
-    #                                   |
-    # La cadena que sera limpiada ------+
+    return ELIMINADOR_ANSI.sub(reemplazo, cadena)
+    #          ^                ^            ^     
+    # Buscador de               |            |
+    # coincidencias             |            | 
+    #                           |            |     
+    # La cadena que reemplaza --+            |
+    # las coincidencias                      |
+    #                                        |
+    # La cadena que sera limpiada -----------+
 
 
 def tam_consola() -> Tuple[int, int]:
