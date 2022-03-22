@@ -16,6 +16,7 @@
 
 
 from .utiles import (limpiar_pantalla, 
+                     limpiar_secuencias_ANSI, 
                      regresar_cursor_inicio_pantalla, 
                      tam_consola,
                      particion_arbitraria)
@@ -30,6 +31,7 @@ init()  # Para que colorama funcione en Windows
 
 
 # TODO mejorar nombres de estilos de texto para que no conflictuen con variables
+# TODO quitar retorno de tam de texto y hacer correcciones necesarias
 
 def advertencia(texto: str, msj: str = 'ADVE'):
     ancho_real = f'{msj} {texto}'.__len__()
@@ -94,19 +96,23 @@ def comentario(texto: str):
 
 
 CURSOR = '>'
+CARET = '│'
 ESC_CODE = '\x1b'
 DELIMITADOR_RECUADRO = '|'
 EXTRA_ESP_CURSOR = len(CURSOR) + 1
+EXTRA_ESP_CARET = len(CARET)
 USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
 TAM_MAX_COLS = 187
 TAM_MAX_FILAS = 44
-MSJ_VACIO = 'escribe'
-CARET = '│'
+MSJ_VACIO = '...'
 MSJ_SIN_ELEMENTOS = 'No hay elementos para mostrar'
 ESP_EXTRA_NOTICIAS = 5
+I_CADENA_COLOR = 0
+I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
+ESP_BLANCO_TABLA = '\\'
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -390,32 +396,53 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
                 return cache_ejecuciones_temporal
 
         regresar_cursor_inicio_pantalla()
+
         
-        
-def __centrar_agregados(agregados, espacio, i_fila_sel, i_col_sel):
-    lineas_en_columnas = []
+def __centrar_agregados(agregados, max_tam, i_fila_sel, i_col_sel):
+    lineas_checadas = []
     for i_fila, fila in enumerate(agregados):
         para_hacer_linea = []
         for i_col, col in enumerate(fila):
             if col == '' and not ((i_fila, i_col) == (i_fila_sel, i_col_sel)):
-                nueva_col = comentario(MSJ_VACIO)
+                msj_vacio = comentario(MSJ_VACIO)
+                nueva_col = centrar_linea(
+                    msj_vacio[I_CADENA_COLOR], 
+                    max_tam + EXTRA_ESP_CURSOR + EXTRA_ESP_CARET,
+                    msj_vacio[I_TAM_CADENA_COLOR],
+                    ESP_BLANCO_TABLA
+                )
             elif (i_fila, i_col) == (i_fila_sel, i_col_sel):
                 if col == '':
-                    nueva_col = seleccion(MSJ_VACIO, CURSOR)
+                    vacio_seleccionado = seleccion(MSJ_VACIO, CURSOR)
+                    nueva_col = centrar_linea(
+                        vacio_seleccionado[I_CADENA_COLOR],
+                        max_tam + EXTRA_ESP_CARET,
+                        vacio_seleccionado[I_TAM_CADENA_COLOR],
+                        ESP_BLANCO_TABLA
+                    )
                 else:
-                    nueva_col = seleccion_modificable(col, CURSOR)
+                    if len(col) == max_tam:
+                        seleccion_con_caret = seleccion(col, CURSOR)
+                    else:
+                        seleccion_con_caret = seleccion_modificable(col, CURSOR)
+                    nueva_col = centrar_linea(
+                        seleccion_con_caret[I_CADENA_COLOR],
+                        max_tam,
+                        seleccion_con_caret[I_TAM_CADENA_COLOR],
+                        ESP_BLANCO_TABLA
+                    ) 
             else:
-                nueva_col = tuple([col, len(col)])
+                nueva_col = centrar_linea(
+                    col,
+                    max_tam + EXTRA_ESP_CURSOR + EXTRA_ESP_CARET,
+                    len(col),
+                    ESP_BLANCO_TABLA
+                )
             para_hacer_linea.append(nueva_col)
-        linea_centrada = columnas_en_fila(
-            *para_hacer_linea,
-            alineaciones=[
-                centrar_linea
-                for _ in para_hacer_linea
-            ],
-            ancho_total=espacio
-        )
-        lineas_en_columnas.append(linea_centrada)
+        lineas_checadas.append(para_hacer_linea)
+    
+    lineas_en_columnas = tabulate(lineas_checadas, tablefmt='orgtbl', stralign='center')
+    lineas_en_columnas = lineas_en_columnas.replace(ESP_BLANCO_TABLA, ' ').splitlines()
         
     return lineas_en_columnas
 
@@ -534,14 +561,14 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             cols_agregado = max([len(fila) for fila in agregado_ordenado])
             agregados_alineados = __centrar_agregados(
                 agregados=agregado_ordenado,
-                espacio=int(cols_terminal * .70),  # Se quiere el 70% del ancho de la consola
+                max_tam=tam_max_agregado,
                 i_fila_sel=i_fila_seleccion,
                 i_col_sel=i_col_seleccion
             )
             agregados_centrados = list(map(
                 lambda linea: centrar_linea(linea, 
                                             cols_terminal,
-                                            int(cols_terminal * .70)),
+                                            len(limpiar_secuencias_ANSI(linea))),
                 agregados_alineados
             ))
         else :
