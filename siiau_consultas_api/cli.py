@@ -363,28 +363,30 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
         elif tecla == Teclas().tec_enter:
             __limpar_cli()
             funcion_obtenida = opciones[i_seleccion].funcion  # Se obtiene la funcion.
-            nombre_funcion = funcion_obtenida.__name__  # Se obtiene el nombre como cadena.
+            nombre_transferencia = opciones[i_seleccion].nombretransf  # Se obtiene el nombre como cadena.
             try:
                 # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
                 # la transferencia (resultados anteriores de otras ejecuciones).
                 try:
                     retorno_funcion = funcion_obtenida(
-                        transferencia_memoria=cache_ejecuciones_temporal[nombre_funcion]
+                        transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
+                        memoria_total=cache_ejecuciones_temporal
                     )
                 except KeyError:
                     # Si aun no se ha ejecutado nada, no habra un resultado de ejecucion
                     # y no existira la llave de dicho resultado. Cuando eso pasa, se crea la
                     # llave requerida y se manda con None.
-                    cache_ejecuciones_temporal[nombre_funcion] = None
+                    cache_ejecuciones_temporal[nombre_transferencia] = None
                     retorno_funcion = funcion_obtenida(
-                        transferencia_memoria=cache_ejecuciones_temporal[nombre_funcion]
+                        transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
+                        memoria_total=cache_ejecuciones_temporal
                     )
             except TypeError:
                 # Se ejecuta la funcion guardada en esa opcion.
                 retorno_funcion = funcion_obtenida()  
 
             # Se guarda el resultado de la funcion en un diccionario.
-            cache_ejecuciones_temporal[nombre_funcion] = retorno_funcion
+            cache_ejecuciones_temporal[nombre_transferencia] = retorno_funcion
                 
             __limpar_cli()
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
