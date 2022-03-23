@@ -343,3 +343,4 @@ NUMEROS_DIC = {
 class Opcion(NamedTuple):
     mensaje: str
     funcion: Any
+    nombretransf: Any
