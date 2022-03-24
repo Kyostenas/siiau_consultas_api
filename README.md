@@ -3,7 +3,12 @@
 ## Instalación
 
 #### Linux
-```pip3 install siiau-consultas-api```
+```usuario:$ pip3 install siiau-consultas-api```
 
 #### Windows
-```pip install siiau-consultas-api```
+```usuario> pip install siiau-consultas-api```
+
+## Uso
+
+#### CLI
+```usuario:$ siiaucli```
