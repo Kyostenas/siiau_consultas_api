@@ -9,7 +9,7 @@ def readfile(filename):
 setup(
   name = 'siiau-consultas-api',         
   packages = ['siiau_consultas_api'],   
-  version = '0.0.0',      
+  version = '0.0.1',      
   description = 'Consulta información del SIIAU de la UDG',
   long_description=readfile('README.rst'),
   long_description_content_type='text/x-rst',
