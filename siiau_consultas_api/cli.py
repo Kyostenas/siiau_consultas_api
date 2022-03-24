@@ -19,7 +19,9 @@ from .utiles import (limpiar_pantalla,
                      limpiar_secuencias_ANSI, 
                      regresar_cursor_inicio_pantalla, 
                      tam_consola,
-                     particion_arbitraria)
+                     particion_arbitraria,
+                     escribir_json,
+                     mk_dir_en_dir_actual)
 from .esquemas import Teclas, Opcion, LETRAS, NUMEROS, LETRAS_DIC, NUMEROS_DIC
 from .getch import getch
 
@@ -39,16 +41,25 @@ def advertencia(texto: str, msj: str = 'ADVE'):
     return f'{pre} {Style.BRIGHT}{Fore.YELLOW}{texto}{Style.RESET_ALL}', ancho_real
 
 
-def error(texto: str, msj: str = ' ERR'):
-    ancho_real = f'{msj} {texto}'.__len__()
-    pre = f'{Style.BRIGHT}{Back.RED}{Style.NORMAL}{Fore.BLACK}{msj}{Style.RESET_ALL}'
-    return f'{pre} {Style.BRIGHT}{Fore.RED}{texto}{Style.RESET_ALL}', ancho_real
+def error(texto: str, msj: str = ' ERR', mostrar_pre = True):
+    if mostrar_pre:
+        ancho_real = f'{msj} {texto}'.__len__()
+        pre = f'{Style.BRIGHT}{Back.RED}{Style.NORMAL}{Fore.BLACK}{msj}{Style.RESET_ALL} '
+    else:
+        ancho_real = f'{texto}'.__len__()
+        pre = ''
+    return f'{pre}{Style.BRIGHT}{Fore.RED}{texto}{Style.RESET_ALL}', ancho_real
 
 
 def correcto(texto: str, msj: str = '  OK'):
     ancho_real = f'{msj} {texto}'.__len__()
     pre = f'{Style.BRIGHT}{Back.GREEN}{Style.NORMAL}{Fore.BLACK}{msj}{Style.RESET_ALL}'
     return f'{pre} {Style.BRIGHT}{Fore.GREEN}{texto}{Style.RESET_ALL}', ancho_real
+
+def ayuda(texto: str, msj: str = 'AYUD'):
+    ancho_real = f'{msj} {texto}'.__len__()
+    pre = f'{Style.DIM}{Back.CYAN}{Style.NORMAL}{Fore.BLACK}{msj}{Style.RESET_ALL}'
+    return f'{pre} {Style.BRIGHT}{Fore.CYAN}{texto}{Style.RESET_ALL}', ancho_real
 
 
 def seleccion(texto: str, cursor: str):
@@ -82,13 +93,21 @@ def sub_titulo(texto: str):
     return f'{Style.BRIGHT}{Fore.CYAN}{texto}{Style.RESET_ALL}', ancho_real
 
 
-def log(texto: str, trazo: str):
-    dentro, _ = seleccion(trazo)
-    ancho_real = f'[{texto}] {trazo}'.__len__()
-    izq, _ = sub_titulo('[')
-    der, _ = sub_titulo(']')
-    pre = f'{izq}{dentro}{der}'
+def log(texto: str, trazo: str, margen: int = 1):
+    espacio = ' ' * margen
+    ancho_real = f'[{espacio}{trazo}{espacio}] {texto}'.__len__()
+    pre = f'{Fore.WHITE}[{espacio}{trazo}{espacio}]{Style.RESET_ALL}'
+    texto, _ = comentario(texto)
     return f'{pre} {texto}', ancho_real
+
+
+def log2(texto: str, trazo: str, margen: int = 1):
+    espacio = ' ' * margen
+    ancho_real = f'{espacio}{trazo}{espacio} {texto}'.__len__()
+    pre = f'{Back.BLACK}{Style.BRIGHT}{Fore.BLUE}{espacio}{trazo}{espacio}{Style.RESET_ALL}'
+    texto, _ = comentario(texto)
+    return f'{pre} {texto}', ancho_real
+
 
 def comentario(texto: str):
     ancho_real = texto.__len__()
@@ -264,7 +283,7 @@ def __formatear_indicaciones(tam_espacio, principal: bool) -> str:
     return linea_indicaciones
 
 
-def __indicaciones_personalicadas(atajos: tuple, tam_espacio) -> str:
+def __indicaciones_personalizadas(atajos: tuple, tam_espacio) -> str:
     atajos = [definicion(*un_atajo) for un_atajo in atajos]
     linea_indicaciones = columnas_en_fila(
         *atajos, 
@@ -280,7 +299,7 @@ def __limpar_cli():
     regresar_cursor_inicio_pantalla()
 
 
-def __leer_tecla():
+def __leer_tecla(retornar_original = False):
     # TODO probar compatibilidad con Windows
     ch = getch()
     # print([ch])
@@ -288,15 +307,27 @@ def __leer_tecla():
         if getch() == '[':
             ch += '['
             ch += getch()
-            return sum(map(ord, ch))
+            if retornar_original:
+                return sum(map(ord, ch)), ch
+            else:
+                return sum(map(ord, ch))
+        else:
+            if retornar_original:
+                return ord(ch), ch
+            else:
+                return ord(ch)
+    else:
+        if retornar_original:
+            return ord(ch), ch
         else:
             return ord(ch)
-    else:
-        return ord(ch)
 
 
-def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
-                            titulo_menu: str = 'MENU', subtitulo_menu: str = None,
+def menu_generico_seleccion(opciones: Tuple[Opcion], 
+                            principal: bool,
+                            memoria_total: dict,
+                            titulo_menu: str = 'MENU',
+                            subtitulo_menu: str = None, 
                             transferencia_memoria: dict = None):
     
     # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
@@ -370,7 +401,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
                 try:
                     retorno_funcion = funcion_obtenida(
                         transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
-                        memoria_total=cache_ejecuciones_temporal
+                        memoria_total=memoria_total
                     )
                 except KeyError:
                     # Si aun no se ha ejecutado nada, no habra un resultado de ejecucion
@@ -379,7 +410,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion], principal: bool,
                     cache_ejecuciones_temporal[nombre_transferencia] = None
                     retorno_funcion = funcion_obtenida(
                         transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
-                        memoria_total=cache_ejecuciones_temporal
+                        memoria_total=memoria_total
                     )
             except TypeError:
                 # Se ejecuta la funcion guardada en esa opcion.
@@ -453,13 +484,15 @@ def __centrar_formatear_noticia(noticia: str, espacio: int,
                                 max_len_noticias: int, formato) -> str:
     """
     Solo debe recibir:
+    ```
+    noticia:            "cualquier cadena de texto"
+    espacio:            1-n
+    max_len_noticas:    el tam de la noticia mas grande
+    formato:            advertencia | error | correcto | ayuda
     
-    noticia: "cualquier cadena de texto"
-    espacio: 1-n
-    formato: advertencia | error | correcto
-    
-    ** espacio recibe cualquier numero del 1 en adelante
-    ** formato recibe funciones sin callback
+    # espacio recibe cualquier numero del 1 en adelante
+    # formato recibe funciones sin callback
+    ```
     """
     espacio_alineado = max_len_noticias + ESP_EXTRA_NOTICIAS
     formateada, tam = formato(noticia)
@@ -486,13 +519,13 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
     if ultimo_tam_filas > TAM_MAX_FILAS:
             ultimo_tam_filas = TAM_MAX_FILAS
             
-    indicaciones = [
+    indicaciones = (
         ('flech', 'moverse'),
         ('Ctrl+A', 'agreg'),
         ('Ctrl+X', 'elim'),
         ('Retroc', 'borr'),
         ('Ctrl+R', 'regresar'),
-    ]
+    )
     
     advertencias = []
     errores = []
@@ -579,7 +612,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                                  len(MSJ_SIN_ELEMENTOS))]
         
         encabezados = __formatear_encabezados(cols_terminal)
-        pie = __indicaciones_personalicadas(indicaciones, cols_terminal)
+        pie = __indicaciones_personalizadas(indicaciones, cols_terminal)
         
         # Si cambia el tam. de la terminal, se limpia por completo
         # para que no queden rastros de la visualizacion anterior.
@@ -740,6 +773,69 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         nueva_cantidad_de_noticias += len(errores) + len(advertencias) + len(correctos)
         regresar_cursor_inicio_pantalla()
 
+
+def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = None, 
+                         correctos: List[str] = None, ayudas: List[str] = None):
+    if errores is None:
+        errores = []    
+    if advertencias is None:
+        advertencias = []    
+    if correctos is None:
+        correctos = []    
+    if correctos is None:
+        correctos = []    
+    
+    indicaciones = (
+        ('ENTER', 'continuar'),
+    )
+    
+    # indicaciones = (
+    #     ('flech', 'moverse'),
+    #     ('Ctrl+A', 'agreg'),
+    #     ('Ctrl+X', 'elim'),
+    #     ('Retroc', 'borr'),
+    #     ('Ctrl+R', 'regresar'),
+    # )
+    cols_terminal, filas_terminal = tam_consola()
+    if cols_terminal > TAM_MAX_COLS:
+            cols_terminal = TAM_MAX_COLS
+    if filas_terminal > TAM_MAX_FILAS:
+            filas_terminal = TAM_MAX_FILAS
+    
+    todas = errores + advertencias + correctos + ayudas
+    max_tam_todas = max(list(map(lambda x: len(x) + ESP_EXTRA_NOTICIAS, todas)))
+            
+    errore_formateados = list(map(lambda notic: __centrar_formatear_noticia(
+        notic, cols_terminal, max_tam_todas, error
+    ), errores))
+    advert_formateadas = list(map(lambda notic: __centrar_formatear_noticia(
+        notic, cols_terminal, max_tam_todas, advertencia
+    ), advertencias))
+    correc_formateados = list(map(lambda notic: __centrar_formatear_noticia(
+        notic, cols_terminal, max_tam_todas, correcto
+    ), correctos))
+    ayudas_formateadas = list(map(lambda notic: __centrar_formatear_noticia(
+        notic, cols_terminal, max_tam_todas, ayuda
+    ), ayudas))
+    
+    encabezados = __formatear_encabezados(cols_terminal=cols_terminal)
+    pie = __indicaciones_personalizadas(indicaciones, cols_terminal)
+    todos_formateados = (errore_formateados +  
+                            advert_formateadas + 
+                            correc_formateados + 
+                            ayudas_formateadas  )
+    todos_unidos = '\n'.join(todos_formateados)
+    todos_centrados_vert = centrar_verticalmente(todos_unidos, filas_terminal - ENC_PIE, 3)
+    
+    print(encabezados, todos_centrados_vert, pie)
+    
+    while True:
+        tecla = __leer_tecla()
+        if tecla == Teclas().tec_enter:
+            __limpar_cli()
+            break
+    
+        
 
 if __name__ == '__main__':
     print('Esto no se deberia mostrar. Ejecutando desde cli.py')
