@@ -123,11 +123,31 @@ def escribir_txt(texto, dirArchivo) -> None:
 
 
 def escribir_json(datos, dir_archivo) -> None:
-    directorio_activo = os.getcwd()
-    dir_archivo = f'{os.sep}'.join([directorio_activo, dir_archivo])
-    with open(dir_archivo, 'w', encoding='utf-8') as arcJson:
-        json.dump(datos, arcJson, ensure_ascii=False, indent=2)
-    arcJson.close()
+    # directorio_activo = os.getcwd()
+    # dir_archivo = f'{os.sep}'.join([directorio_activo, dir_archivo])
+    with open(dir_archivo, 'w', encoding='utf-8') as archivo_json:
+        json.dump(datos, archivo_json, ensure_ascii=False, indent=4)
+    archivo_json.close()
+
+
+def leer_json(dir_archivo) -> dict:
+    with open(dir_archivo, 'r', encoding='utf-8') as archivo_json:
+        datos = json.load(archivo_json)
+    archivo_json.close()
+    return datos
+
+
+# basado en https://stackoverflow.com/a/21035861/13132076
+def modificar_json(dir_archivo, valores_modificados: dict) -> None:
+    with open(dir_archivo, 'r+', encoding='utf-8') as archivo_json:
+        datos = json.load(archivo_json)
+        for llave, valor in valores_modificados:
+            datos[llave] = valor
+        archivo_json.seek(0)
+        json.dump(datos, archivo_json, ensure_ascii=False, indent=4)
+        archivo_json.truncate()
+        
+    archivo_json.close()
 
 
 def escribir_excel(dir_archivo, *celsNegritas, **tablas) -> None:
