@@ -41,7 +41,7 @@ setup(
   ],
   entry_points={
     'console_scripts': [
-      'siiau-cli = siiau_consultas_api:menu_principal'
+      'siiaucli = siiau_consultas_api:main'
     ]
   }
 )
