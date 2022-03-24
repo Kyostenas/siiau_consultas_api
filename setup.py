@@ -29,15 +29,11 @@ setup(
     'alive-progress==2.3.1',
   ],
   classifiers=[
-    'Development Status :: 0 - Alpha',      
     'Intended Audience :: Developers',      
     'Intended Audience :: Students',      
-    'Topic :: Software Development :: Build Tools',
     'License :: GNU Approved :: GPL License',   
     'Programming Language :: Python :: 3',      
     'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9'
-    'Programming Language :: Python :: 3.10'
   ],
   entry_points={
     'console_scripts': [

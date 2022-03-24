@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from token import TYPE_COMMENT
 from .cli import menu_generico_seleccion as menu_gen, sub_titulo
 from .cli import pantalla_agregado_centrada as pantalla_para_agregar
 from .cli import pantalla_de_mensajes, __leer_tecla
@@ -169,7 +170,7 @@ def menu_principal():
     memoria_total = {}
     retorno_final = menu_gen(opciones, True, titulo_menu=titulo_menu, memoria_total=memoria_total)
     
-    exit(print(retorno_final, '\n', memoria_total))
+    # exit(print(retorno_final, '\n', memoria_total))
 
 
 def __existe_directorio(directorio: str) -> bool:
@@ -187,10 +188,10 @@ def __comprobar_directorios(*directorios) -> List[str]:
     directorios_por_crear = []
     for directorio in directorios:
         if __existe_directorio(directorio):
-            print(log(f'"{directorio}" encontrado', TRAZO)[TEXTO_COLOR])
+            print(log(correcto(f'"{directorio}" encontrado')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
         else:
             print(log(advertencia(f'"{directorio}" no existe')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
-        directorios_por_crear.append(directorio)
+            directorios_por_crear.append(directorio)
     return directorios_por_crear
 
     
@@ -247,7 +248,23 @@ def main():
         print(' ' * os.get_terminal_size()[0], flush=True, end='\r')
         print(pregunta, sub_titulo(char_crear_carpetas)[TEXTO_COLOR], flush=True)
         
-                
-
-    # menu_principal()
+        if crear:
+            for directorio in directorios_por_crear:
+                os.makedirs(directorio)
+                print(log(correcto(f'{directorio} creado')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
+        else:
+            msj_error = log(error(
+                'se requieren los directorios para funcionar'
+            )[TEXTO_COLOR], TRAZO)[TEXTO_COLOR]
+            exit(print(msj_error))
+    
+    print(log('presione ENTER para comenzar', TRAZO)[TEXTO_COLOR])
+    while True:
+        tecla = __leer_tecla()
+        if tecla == teclas.tec_enter:
+            break
+        elif tecla == teclas.com_ctrl_c:
+            exit(print('Hasta luego'))
+    
+    menu_principal()
 
