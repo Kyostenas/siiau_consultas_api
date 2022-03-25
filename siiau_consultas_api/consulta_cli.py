@@ -15,15 +15,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from token import TYPE_COMMENT
+from lib2to3.pgen2.token import OP
 from .cli import menu_generico_seleccion as menu_gen, sub_titulo
 from .cli import pantalla_agregado_centrada as pantalla_para_agregar
 from .cli import pantalla_de_mensajes, __leer_tecla
 from .cli import titulo, advertencia, error, correcto, ayuda, log, seleccion
-from .esquemas import Opcion, Teclas
+from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
 from .getch import getch
+from .servicio_consulta_siiau import oferta_academica, Siiau, centros, carreras, materias
+from .servicio_oferta_siiau import estructurar_oferta_como_horario
 
-from typing import List
+from typing import List, Tuple
 import os
 
 # TODO Agregar interfaz para uso en consola
@@ -41,6 +43,10 @@ MNU_CENTROS = 'MNU_CENTROS'
 # NOMBRES AGREGADOS
 AGR_MATERIAS = 'AGR_MATERIAS'
 AGR_NRCS_EXCLUSICOS = 'AGR_NRCS_EXCLUSICOS'
+
+# MENUS SELECCION (SEL -> SELECCION)
+MNU_SEL_CENTROS = 'MNU_SEL_CENTROS'
+MNU_SEL_CARRERAS = 'MNU_SEL_CARRERAS'
 # (o-------------------------------------o-------------------------------------o)
 
 
@@ -75,7 +81,7 @@ def _crear_opcion(nombre_opcion: str, funcion):
 # | inicio                                                               inicio |
 
 
-def __agregar_nrcs_exclusivos(transferencia_memoria, memoria_total, ruta):
+def __agregar_nrcs_exclusivos(transferencia_memoria, memoria_total):
     if transferencia_memoria is None:
         transferencia_memoria = {}
     try:
@@ -142,9 +148,84 @@ def __menu_consultar_oferta(transferencia_memoria, memoria_total):
 # | inicio                                                               inicio |
 
 
+def __menu_centros(centros: Tuple[CentroCompleto]):
+    titulo = 'centros universitarios de la UDG'
+    opciones = []
+    for centro in centros:
+        opciones.append(
+            Opcion(centro.nombre_completo, lambda: centro.id_centro, MNU_SEL_CENTROS)
+        )
+    memoria_total = {}
+    retorno = menu_gen(
+        opciones, 
+        principal=False, 
+        titulo_menu=titulo, 
+        memoria_total=memoria_total,
+        regresar_en_seleccion=True
+    )
+    id_centro_seleccionado = retorno[MNU_SEL_CENTROS]
+    
+    return id_centro_seleccionado
+
+
+def __menu_centros() -> CentroCompleto:
+    titulo = 'centros universitarios de la UDG'
+    opciones = []
+    centros_udg = centros()
+    for centro in centros_udg:
+        nombre_centro = centro.nombre_completo
+        opciones.append(
+            Opcion(nombre_centro, lambda: centro, MNU_SEL_CENTROS)
+        )
+    memoria_total = {}
+    retorno = menu_gen(
+        opciones, 
+        principal=False, 
+        titulo_menu=titulo, 
+        memoria_total=memoria_total,
+        regresar_en_seleccion=True
+    )
+    centro = retorno[MNU_SEL_CENTROS]
+    
+    return centro
+
+
+def __menu_carreras(centro: CentroCompleto) -> CarreraCompleta:
+    titulo = f'carreras de {centro.nombre_completo}'
+    opciones = []
+    carreras_centro = carreras(centro.id_centro)
+    for una_carrera in carreras_centro:
+        nombre_carrera = una_carrera.nombre_completo
+        ref_carrera = una_carrera.ref_carrera
+        mostrar = f'{ref_carrera}   {nombre_carrera}'
+        opciones.append(
+            Opcion(mostrar, lambda: una_carrera, MNU_SEL_CARRERAS)
+        )
+    memoria_total = {}
+    retorno = menu_gen(
+        opciones, 
+        principal=False, 
+        titulo_menu=titulo, 
+        memoria_total=memoria_total,
+        regresar_en_seleccion=True
+    )
+    carrera = retorno[MNU_SEL_CARRERAS]
+    
+    return carrera
+
+
 def __consultar_centros(transferencia_memoria, memoria_total):
     if transferencia_memoria is None:
-        transferencia_memoria = {}
+        transferencia_memoria = []
+    historial = []
+
+    centro = __menu_centros()
+    carrera = __menu_carreras(centro)
+        
+    exit(print(centro, carrera))
+        
+
+    
     
     return transferencia_memoria 
 

@@ -328,7 +328,8 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                             memoria_total: dict,
                             titulo_menu: str = 'MENU',
                             subtitulo_menu: str = None, 
-                            transferencia_memoria: dict = None):
+                            transferencia_memoria: dict = None,
+                            regresar_en_seleccion: bool = False):
     
     # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
     if transferencia_memoria != None:
@@ -418,8 +419,9 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
 
             # Se guarda el resultado de la funcion en un diccionario.
             cache_ejecuciones_temporal[nombre_transferencia] = retorno_funcion
-                
             __limpar_cli()
+            if regresar_en_seleccion:
+                return cache_ejecuciones_temporal
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
             if principal:  # Si es principal, y se aprieta salir, cierra el programa.
@@ -429,7 +431,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 return cache_ejecuciones_temporal
 
         regresar_cursor_inicio_pantalla()
-
+        
         
 def __centrar_agregados(agregados, max_tam, i_fila_sel, i_col_sel):
     lineas_checadas = []
