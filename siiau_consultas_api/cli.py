@@ -124,6 +124,7 @@ USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
+ENC_PIE_BORDE = ENC_PIE + 12
 TAM_MAX_COLS = 200
 TAM_MAX_FILAS = 200
 MSJ_VACIO = '...'
@@ -132,7 +133,14 @@ ESP_EXTRA_NOTICIAS = 5
 I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
-ESP_BORDES_TABLA = lambda cols: (2 * cols) + 2
+
+
+def __obtener_espacio_bordes_tabla(cols): 
+    return (2 * cols) + 2
+
+
+def __obtener_max_filas_opciones(filas_term): 
+    return filas_term - ENC_PIE_BORDE
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -298,6 +306,13 @@ def __indicaciones_personalizadas(atajos: tuple, tam_espacio) -> str:
 def __limpar_cli():
     limpiar_pantalla()
     regresar_cursor_inicio_pantalla()
+    
+
+def __soobreescribir_cli():
+    cols_consola, filas_consola = tam_consola()
+    barra_vacia = ' ' * (cols_consola - 1)
+    cuadro_vacio = '\n'.join([barra_vacia for _ in range(filas_consola - 1)])
+    print(cuadro_vacio)
 
 
 def __leer_tecla(retornar_original = False):
@@ -305,14 +320,23 @@ def __leer_tecla(retornar_original = False):
     ch = getch()
     # print([ch])
     if ch == ESC_CODE:
-        if getch() == '[':
+        otro_ch = getch()
+        if otro_ch == '[':
             ch += '['
-            ch += getch()
+            decisivo_ctrl = getch()
+            if decisivo_ctrl.isnumeric():
+                ch += decisivo_ctrl
+                ch += getch()
+                ch += getch()
+                ch += getch()
+            else:
+                ch += decisivo_ctrl
             if retornar_original:
                 return sum(map(ord, ch)), ch
             else:
                 return sum(map(ord, ch))
         else:
+            print([[otro_ch]])
             if retornar_original:
                 return ord(ch), ch
             else:
@@ -331,8 +355,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                             subtitulo_menu: str = None, 
                             transferencia_memoria: dict = None,
                             regresar_en_seleccion: bool = False,
-                            cuadricula: bool = False,
-                            paginar: bool = False):
+                            cuadricula: bool = False):
     
     # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
     if transferencia_memoria != None:
@@ -342,10 +365,10 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         
     i_fila_seleccion = 0
     i_col_seleccion = 0
-    if paginar:
-        pagina = 0
-        total_paginas = 0
-        tam_max_pagina = 0
+    pagina = 0
+    total_paginas = 0
+    paginar = False
+    ultima_cant_filas = 0
         
     if cuadricula:
         ult_tam_de_filas_cuadricula = 0
@@ -371,13 +394,13 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             else:
                 elem_por_fila = int(elem_por_fila)
             ancho_cols = (int(elem_por_fila) * tam_opcion_mas_grande)
-            ancho_cuadricula = ancho_cols + ESP_BORDES_TABLA(elem_por_fila)
-            tam_max_ancho_cuadricula = ultimo_tam_cols_terminal - 30
+            ancho_cuadricula = ancho_cols + __obtener_espacio_bordes_tabla(elem_por_fila)
+            tam_max_ancho_cuadricula = ultimo_tam_cols_terminal - 50
             while True:
                 if ancho_cuadricula > tam_max_ancho_cuadricula:
                     elem_por_fila -= 1
                     ancho_cols = (int(elem_por_fila) * tam_opcion_mas_grande)
-                    ancho_cuadricula = ancho_cols + ESP_BORDES_TABLA(elem_por_fila)
+                    ancho_cuadricula = ancho_cols + __obtener_espacio_bordes_tabla(elem_por_fila)
                 else:
                     break
             
@@ -406,7 +429,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             cuadricula_ordenada = particion_arbitraria(cuadricula_modificable, 
                                                        *tams_reales_filas)
             malla_funciones = particion_arbitraria(cuadricula_funciones, 
-                                                   *tams_reales_filas)    
+                                                   *tams_reales_filas)
                   
         cols_terminal, filas_terminal = tam_consola()
         if cols_terminal > TAM_MAX_COLS:
@@ -418,6 +441,84 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             ultimo_tam_cols_terminal = cols_terminal
             ultimo_tam_filas_terminal = filas_terminal
             __limpar_cli()
+            
+        # Comprobación para paginar (de ser necesario)
+        if pagina > total_paginas - 1:
+            if total_paginas > 0:
+                pagina = total_paginas - 1
+            else:
+                pagina = 0
+        elif pagina < 0:
+            pagina = 0
+        tam_max_filas = __obtener_max_filas_opciones(ultimo_tam_filas_terminal)
+        if cuadricula:
+            cant_filas_cuadricula = len(cuadricula_ordenada)
+            if  cant_filas_cuadricula > tam_max_filas:
+                if paginar is False:
+                    paginar = True
+                partes_particion = []
+                while cant_filas_cuadricula > tam_max_filas:
+                    cant_filas_cuadricula -= tam_max_filas
+                    partes_particion.append(tam_max_filas)
+                partes_particion.append(cant_filas_cuadricula)
+                
+                cuadricula_ordenada = particion_arbitraria(
+                    cuadricula_ordenada,
+                    *partes_particion
+                )
+                malla_funciones = particion_arbitraria(
+                    malla_funciones,
+                    *partes_particion
+                )
+                total_paginas = len(cuadricula_ordenada)
+                
+                try:
+                    cuadricula_ordenada = cuadricula_ordenada[pagina]
+                    malla_funciones = malla_funciones[pagina]
+                except IndexError:
+                    pagina = 0
+                    cuadricula_ordenada = cuadricula_ordenada[pagina]
+                    malla_funciones = malla_funciones[pagina]
+            else:
+                if paginar is True:
+                    paginar = False
+        else:
+            cant_opciones = len(opciones)
+            if  cant_opciones > tam_max_filas:
+                if paginar is False:
+                    paginar = True
+                partes_particion = []
+                while cant_opciones > tam_max_filas:
+                    cant_opciones -= tam_max_filas
+                    partes_particion.append(tam_max_filas)
+                partes_particion.append(cant_opciones)
+                
+                opciones = particion_arbitraria(
+                    opciones,
+                    *partes_particion
+                )
+                
+                total_paginas = len(opciones)
+                try:
+                    opciones = opciones[pagina]
+                except IndexError:
+                    pagina = 0
+                    opciones = opciones[pagina]
+            else:
+                if paginar is True:
+                    paginar = False
+        
+        if paginar:
+            # Se vuelve a obtener la cantidad de opciones (filas de opciones) 
+            # porque al paginar cambian cuantas se muestran.
+            if cuadricula:
+                cant_filas_opciones = len(cuadricula_ordenada)
+            else:
+                cant_filas_opciones = len(opciones)
+            if cant_filas_opciones != ultima_cant_filas:
+                ultima_cant_filas = cant_filas_opciones
+                # Si varía, se limpia la consola completa.
+                __limpar_cli()
 
         titulo_formateado, len_titulo = titulo(titulo_menu.upper(), 2)
         titulo_centrado = centrar_linea(titulo_formateado, cols_terminal, len_titulo)
@@ -427,7 +528,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         
         if cuadricula:
             # Para hacer bucle de selecccion.
-            # Se llega al final regresa al comienzo y viceversa
+            # Se llega al final, regresa al comienzo y viceversa.
             tam_cuadricula_ordenada  = len(cuadricula_ordenada) - 1
             if i_fila_seleccion > tam_cuadricula_ordenada :
                 i_fila_seleccion = 0
@@ -471,12 +572,20 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         else:
             opciones_formateadas = __formatear_opciones(opciones, i_fila_seleccion, cols_terminal)
         
+        if paginar:
+            paginas, len_pags = comentario(f'PAG {pagina + 1}/{total_paginas}')
+            paginas = centrar_linea(paginas, cols_terminal, len_pags)
+        else:
+            paginas = ''
 
         menu_principal = [
             titulo_centrado,
             '',
             '',
-            *opciones_formateadas
+            *opciones_formateadas,
+            '',
+            paginas,
+            ''
         ]
         if subtitulo_menu != None:
             menu_principal.insert(1, subt_centrado)
@@ -500,6 +609,12 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 i_col_seleccion += 1
             else:
                 pass
+        elif tecla == Teclas().com_ctrl_flecha_iz:
+            if paginar:
+                pagina -= 1
+        elif tecla == Teclas().com_ctrl_flecha_de:
+            if paginar:
+                pagina += 1
         elif tecla == Teclas().tec_enter:
             __limpar_cli()
             if cuadricula:
@@ -906,13 +1021,6 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
         ('ENTER', 'continuar'),
     )
     
-    # indicaciones = (
-    #     ('flech', 'moverse'),
-    #     ('Ctrl+A', 'agreg'),
-    #     ('Ctrl+X', 'elim'),
-    #     ('Retroc', 'borr'),
-    #     ('Ctrl+R', 'regresar'),
-    # )
     cols_terminal, filas_terminal = tam_consola()
     if cols_terminal > TAM_MAX_COLS:
             cols_terminal = TAM_MAX_COLS
