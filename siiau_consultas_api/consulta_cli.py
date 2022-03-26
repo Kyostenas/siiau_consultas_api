@@ -15,7 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from lib2to3.pgen2.token import OP
+from .utiles import barra_progreso, tam_consola
+from .servicio_tabla import tabla_dos_columnas_valores
 from .cli import menu_generico_seleccion as menu_gen, sub_titulo
 from .cli import pantalla_agregado_centrada as pantalla_para_agregar
 from .cli import pantalla_de_mensajes, __leer_tecla
@@ -27,6 +28,7 @@ from .servicio_oferta_siiau import estructurar_oferta_como_horario
 
 from typing import List, Tuple
 import os
+
 
 # TODO Agregar interfaz para uso en consola
 
@@ -47,6 +49,7 @@ AGR_NRCS_EXCLUSICOS = 'AGR_NRCS_EXCLUSICOS'
 # MENUS SELECCION (SEL -> SELECCION)
 MNU_SEL_CENTROS = 'MNU_SEL_CENTROS'
 MNU_SEL_CARRERAS = 'MNU_SEL_CARRERAS'
+MNU_SEL_MATERIAS = 'MNU_SEL_MATERIAS'
 # (o-------------------------------------o-------------------------------------o)
 
 
@@ -148,42 +151,23 @@ def __menu_consultar_oferta(transferencia_memoria, memoria_total):
 # | inicio                                                               inicio |
 
 
-def __menu_centros(centros: Tuple[CentroCompleto]):
-    titulo = 'centros universitarios de la UDG'
-    opciones = []
-    for centro in centros:
-        opciones.append(
-            Opcion(centro.nombre_completo, lambda: centro.id_centro, MNU_SEL_CENTROS)
-        )
-    memoria_total = {}
-    retorno = menu_gen(
-        opciones, 
-        principal=False, 
-        titulo_menu=titulo, 
-        memoria_total=memoria_total,
-        regresar_en_seleccion=True
-    )
-    id_centro_seleccionado = retorno[MNU_SEL_CENTROS]
-    
-    return id_centro_seleccionado
-
-
 def __menu_centros() -> CentroCompleto:
     titulo = 'centros universitarios de la UDG'
     opciones = []
-    centros_udg = centros()
-    for centro in centros_udg:
-        nombre_centro = centro.nombre_completo
-        opciones.append(
-            Opcion(nombre_centro, lambda: centro, MNU_SEL_CENTROS)
-        )
+    centros_universitarios = centros()
+    for un_centro in centros_universitarios:
+        nombre_centro = un_centro.nombre_completo
+        def retornar_centro(centro=un_centro): return centro
+        nueva_opcion = Opcion(nombre_centro, retornar_centro, MNU_SEL_CENTROS)
+        opciones.append(nueva_opcion)
     memoria_total = {}
     retorno = menu_gen(
         opciones, 
         principal=False, 
         titulo_menu=titulo, 
         memoria_total=memoria_total,
-        regresar_en_seleccion=True
+        regresar_en_seleccion=True,
+        cuadricula=True
     )
     centro = retorno[MNU_SEL_CENTROS]
     
@@ -195,21 +179,51 @@ def __menu_carreras(centro: CentroCompleto) -> CarreraCompleta:
     opciones = []
     carreras_centro = carreras(centro.id_centro)
     for una_carrera in carreras_centro:
-        nombre_carrera = una_carrera.nombre_completo
         ref_carrera = una_carrera.ref_carrera
-        mostrar = f'{ref_carrera}   {nombre_carrera}'
-        opciones.append(
-            Opcion(mostrar, lambda: una_carrera, MNU_SEL_CARRERAS)
-        )
+        def retornar_carrera(carrera=una_carrera): return carrera
+        nueva_opcion = Opcion(ref_carrera, retornar_carrera, MNU_SEL_CARRERAS)
+        opciones.append(nueva_opcion)
     memoria_total = {}
     retorno = menu_gen(
         opciones, 
         principal=False, 
         titulo_menu=titulo, 
         memoria_total=memoria_total,
-        regresar_en_seleccion=True
+        regresar_en_seleccion=True,
+        cuadricula=True
     )
     carrera = retorno[MNU_SEL_CARRERAS]
+    
+    return carrera
+
+
+def __menu_materias(carrera: CarreraCompleta) -> ClaseCompleta:
+    titulo = f'materias de {carrera.nombre_completo} ({carrera.ref_carrera})'
+    opciones = []
+    materias_carrera = materias(carrera.ref_carrera)
+    for progreso, total, obtenidas in materias_carrera:
+        if obtenidas == None:
+            print(
+                barra_progreso(total, progreso, mensaje='descargando materias'),
+                flush=True, 
+                end='\r'
+            )
+        else:
+            for una_materia in obtenidas:
+                nombre_materia = una_materia.clave
+                def retornar_materia(materia=una_materia): return materia
+                nueva_opcion = Opcion(nombre_materia, retornar_materia, MNU_SEL_MATERIAS)
+                opciones.append(nueva_opcion)
+    memoria_total = {}
+    retorno = menu_gen(
+        opciones, 
+        principal=False, 
+        titulo_menu=titulo, 
+        memoria_total=memoria_total,
+        regresar_en_seleccion=True,
+        cuadricula=True
+    )
+    carrera = retorno[MNU_SEL_MATERIAS]
     
     return carrera
 
@@ -218,11 +232,13 @@ def __consultar_centros(transferencia_memoria, memoria_total):
     if transferencia_memoria is None:
         transferencia_memoria = []
     historial = []
+    cols_terminal, _ = tam_consola()
 
     centro = __menu_centros()
     carrera = __menu_carreras(centro)
+    materia = __menu_materias(carrera)
         
-    exit(print(centro, carrera))
+    exit(print(tabla_dos_columnas_valores(materia, cols_terminal)))
         
 
     
