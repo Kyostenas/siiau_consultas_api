@@ -365,32 +365,44 @@ def carreras(centro_cup_id: str) -> Tuple[CarreraCompleta]:
     return carreras_procesadas
 
 
-def __obtener_materia_completa(area, clave_materia, ciclo_inicio='') -> Union[Tuple[ClaseCompleta], Union[list, any]]:
+def __obtener_materia_completa(area, clave_materia, ciclo_inicio=''):
     url_materia_completa = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.detmate'])
+    yield 1, 11, None, None
     subclave = ','.join([area, clave_materia, ciclo_inicio])
+    yield 2, 11, None, None
     payload = dict(subclavep=subclave,
                    pEntra='OAP')  # TODO Encontrar qué es esto
+    yield 3, 11, None, None
     url_materia_completa = __join_payload_url(url_materia_completa, payload)
     resp = request('GET',
                    url=url_materia_completa,
                    data=payload)
+    yield 4, 11, None, None
     tabla_materia_completa = __websp_findall(resp, name='td')
+    yield 5, 11, None, None
     encabezados = __websp_findall(resp, name='th')
+    yield 6, 11, None, None
     encabezados = list(map(limpiar_html, encabezados))
+    yield 7, 11, None, None
     titulo = encabezados.pop(TITULO_MATERIA_COMPLETA)
+    yield 8, 11, None, None
     tabla_materia_completa = list(map(limpiar_html, tabla_materia_completa))[:len(encabezados)]
+    yield 9, 11, None, None
 
     if tabla_materia_completa[I_AREA_MATERIA] == '':
         ciclo_inicio = tabla_materia_completa[I_CICLO_INICIO_MATERIA]
-        _, tabla_materia_completa = __obtener_materia_completa(area, clave_materia, ciclo_inicio)
+        progreso = __obtener_materia_completa(area, clave_materia, ciclo_inicio)
+        for paso, total, _, tabla in progreso:
+            if tabla != None:
+                tabla_materia_completa = tabla
     else:
         tabla_materia_completa.insert(TITULO_MATERIA_COMPLETA, titulo)
+    yield 10, 11, None, None
+    yield 11, 11, ClaseCompleta(*tabla_materia_completa), tabla_materia_completa
 
-    return ClaseCompleta(*tabla_materia_completa), tabla_materia_completa
 
 
-
-def materias(self, id_carrera: str) -> Tuple[ClaseCompleta]:
+def materias(id_carrera: str):
     url_catalogo_materias = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.cataxcarr'])
     payload = dict(carrerap=id_carrera,
                    ordenp=1,
@@ -408,13 +420,24 @@ def materias(self, id_carrera: str) -> Tuple[ClaseCompleta]:
     tabla_materias = particionar(tabla_materias, ancho_tabla)
 
     materias_completas = []
+    completados = 0
+    nones = [1 for renglon_materia in tabla_materias if None in renglon_materia]
+    nones = sum(nones)
+    total = (len(tabla_materias) - nones)
+    total = total + (11 * total)
     for renglon_materia in tabla_materias:
         if None not in renglon_materia:  # Ultimo renglón tiene "(c) 2002 Universidad de Guadalajara ..."
-            materia_completa: ClaseCompleta
-            materia_completa, _ = self._obtener_materia_completa(*renglon_materia[RANGO_SUBCLAVE_MATERIAS])
+            progreso = __obtener_materia_completa(*renglon_materia[RANGO_SUBCLAVE_MATERIAS])
+            for paso, total_mat_com, materia_obtenida, _ in progreso:
+                if materia_obtenida != None:
+                    materia_completa = materia_obtenida
+                completados += 1
+                yield completados, total, None
             materias_completas.append(materia_completa)
-
-    return tuple(materias_completas)
+            completados += 1
+            yield completados, total, None
+    else:
+        yield completados, total, tuple(materias_completas)
 
 
 def __obtener_cookies(resp_inicio) -> str:
