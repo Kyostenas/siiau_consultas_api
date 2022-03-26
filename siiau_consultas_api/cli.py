@@ -329,7 +329,9 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                             titulo_menu: str = 'MENU',
                             subtitulo_menu: str = None, 
                             transferencia_memoria: dict = None,
-                            regresar_en_seleccion: bool = False):
+                            regresar_en_seleccion: bool = False,
+                            cuadricula: bool = False,
+                            paginar: bool = False):
     
     # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
     if transferencia_memoria != None:
@@ -337,15 +339,51 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
     else:
         cache_ejecuciones_temporal = {}
         
-    i_seleccion = 0
+    i_fila_seleccion = 0
+    i_col_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
     if ultimo_tam_cols > TAM_MAX_COLS:
             ultimo_tam_cols = TAM_MAX_COLS
     if ultimo_tam_filas > TAM_MAX_FILAS:
             ultimo_tam_filas = TAM_MAX_FILAS
+            
+    tam_opcion_mas_grande = max(list(map(lambda opcion: len(opcion.mensaje), opciones)))
 
     __limpar_cli()
     while True:
+        if cuadricula :
+            # Se calcula el tam. de cada fila para la representacion
+            # grafica.
+            cuadricula_modificable = list(map(lambda opcion: opcion.mensaje, opciones))
+            cuadricula_funciones = list(opciones)
+            tams_filas = sqrt(len(cuadricula_modificable))
+            if tams_filas < int(tams_filas):
+                tams_filas = int(tams_filas) + 1
+            else:
+                tams_filas = int(tams_filas)
+            tams_reales_filas = []
+            cant_opciones = len(cuadricula_modificable)
+            
+            # Se crean los tam de cada fila.
+            while cant_opciones > tams_filas:
+                cant_opciones -= tams_filas
+                tams_reales_filas.append(tams_filas)
+                
+            # Si sobra, significa que una fila sera menor, y se agrega el
+            # sobrane para que se cree dicha fila.
+            if cant_opciones > 0:
+                tams_reales_filas.append(cant_opciones)
+                
+            # Se crea una particion arbitraria, que es una particion en el
+            # que se decide el tam. de cada parte individualmente.
+            # El tam de cada parte esta en "tams_reales_filas", y se pasa
+            # con el operador * porque el argumento partes puede recibir
+            # n cantidad de enteros; asi recibe cada entero individualmente.
+            cuadricula_ordenada = particion_arbitraria(cuadricula_modificable, 
+                                                       *tams_reales_filas)
+            malla_funciones = particion_arbitraria(cuadricula_funciones, 
+                                                   *tams_reales_filas)    
+                  
         cols_terminal, filas_terminal = tam_consola()
         if cols_terminal > TAM_MAX_COLS:
             cols_terminal = TAM_MAX_COLS
@@ -363,16 +401,52 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             subt_formateado, len_sub = sub_titulo(subtitulo_menu.upper())
             subt_centrado = centrar_linea(subt_formateado, cols_terminal, len_sub)
         
-        # Para hacer bucle de selecccion.
-        # Se llega al final regresa al comienzo y viceversa
-        if i_seleccion > (len(opciones) - 1):
-            i_seleccion = 0
-        if i_seleccion < 0:
-            i_seleccion = (len(opciones) - 1)
+        if cuadricula:
+            # Para hacer bucle de selecccion.
+            # Se llega al final regresa al comienzo y viceversa
+            tam_cuadricula_ordenada  = len(cuadricula_ordenada) - 1
+            if i_fila_seleccion > tam_cuadricula_ordenada :
+                i_fila_seleccion = 0
+            elif i_fila_seleccion < 0:
+                i_fila_seleccion = tam_cuadricula_ordenada 
+            try:
+                tam_fila_seleccionada = len(cuadricula_ordenada[i_fila_seleccion]) - 1
+            except IndexError:
+                tam_fila_seleccionada = 0
+            if i_col_seleccion > tam_fila_seleccionada:
+                i_col_seleccion = 0
+            elif i_col_seleccion < 0:
+                i_col_seleccion = tam_fila_seleccionada
+        else:
+            # Para hacer bucle de selecccion.
+            # Se llega al final regresa al comienzo y viceversa
+            if i_fila_seleccion > (len(opciones) - 1):
+                i_fila_seleccion = 0
+            if i_fila_seleccion < 0:
+                i_fila_seleccion = (len(opciones) - 1)
 
         encabezados_formados = __formatear_encabezados(cols_terminal)
         indicaciones = __formatear_indicaciones(cols_terminal, principal)
-        opciones_formateadas = __formatear_opciones(opciones, i_seleccion, cols_terminal)
+        
+        if cuadricula:
+            lineas_cuadricula = __centrar_cuadricula(
+                cuadricula_ordenada, 
+                tam_opcion_mas_grande,
+                i_fila_seleccion,
+                i_col_seleccion,
+                modificable=False
+            )
+            opciones_formateadas = list(map(
+                lambda linea: centrar_linea(
+                    linea,
+                    cols_terminal,
+                    len(limpiar_secuencias_ANSI(linea))
+                ), 
+                lineas_cuadricula
+            ))
+        else:
+            opciones_formateadas = __formatear_opciones(opciones, i_fila_seleccion, cols_terminal)
+        
 
         menu_principal = [
             titulo_centrado,
@@ -388,14 +462,28 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
 
         """ En esta parte se espera una tecla y se hace algo con el resultado """
         tecla = __leer_tecla()
-        if tecla == Teclas().tec_flecha_ar or tecla == Teclas().tec_flecha_iz:
-            i_seleccion -= 1
-        elif tecla == Teclas().tec_flecha_ab or tecla == Teclas().tec_flecha_de:
-            i_seleccion += 1
+        if tecla == Teclas().tec_flecha_ar:
+            i_fila_seleccion -= 1
+        elif tecla == Teclas().tec_flecha_ab:
+            i_fila_seleccion += 1
+        elif tecla == Teclas().tec_flecha_iz:
+            if cuadricula:
+                i_col_seleccion -= 1
+            else:
+                pass
+        elif tecla == Teclas().tec_flecha_de:
+            if cuadricula:
+                i_col_seleccion += 1
+            else:
+                pass
         elif tecla == Teclas().tec_enter:
             __limpar_cli()
-            funcion_obtenida = opciones[i_seleccion].funcion  # Se obtiene la funcion.
-            nombre_transferencia = opciones[i_seleccion].nombretransf  # Se obtiene el nombre como cadena.
+            if cuadricula:
+                funcion_obtenida = malla_funciones[i_fila_seleccion][i_col_seleccion].funcion  # Se obtiene la funcion.
+                nombre_transferencia = malla_funciones[i_fila_seleccion][i_col_seleccion].nombretransf  # Se obtiene el nombre como cadena.
+            else:
+                funcion_obtenida = opciones[i_fila_seleccion].funcion  # Se obtiene la funcion.
+                nombre_transferencia = opciones[i_fila_seleccion].nombretransf  # Se obtiene el nombre como cadena.
             try:
                 # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
                 # la transferencia (resultados anteriores de otras ejecuciones).
@@ -433,16 +521,16 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         regresar_cursor_inicio_pantalla()
         
         
-def __centrar_agregados(agregados, max_tam, i_fila_sel, i_col_sel):
+def __centrar_cuadricula(elementos, max_tam, i_fila_sel, i_col_sel, modificable=True):
     lineas_checadas = []
-    for i_fila, fila in enumerate(agregados):
+    for i_fila, fila in enumerate(elementos):
         para_hacer_linea = []
         for i_col, col in enumerate(fila):
             if col == '' and not ((i_fila, i_col) == (i_fila_sel, i_col_sel)):
                 msj_vacio = comentario(MSJ_VACIO)
                 nueva_col = centrar_linea(
                     msj_vacio[I_CADENA_COLOR], 
-                    max_tam + EXTRA_ESP_CURSOR + EXTRA_ESP_CARET,
+                    max_tam + EXTRA_ESP_CURSOR + (EXTRA_ESP_CARET if modificable else 0),
                     msj_vacio[I_TAM_CADENA_COLOR],
                     ESP_BLANCO_TABLA
                 )
@@ -451,25 +539,27 @@ def __centrar_agregados(agregados, max_tam, i_fila_sel, i_col_sel):
                     vacio_seleccionado = seleccion(MSJ_VACIO, CURSOR)
                     nueva_col = centrar_linea(
                         vacio_seleccionado[I_CADENA_COLOR],
-                        max_tam + EXTRA_ESP_CARET,
+                        max_tam + (EXTRA_ESP_CARET if modificable else 0),
                         vacio_seleccionado[I_TAM_CADENA_COLOR],
                         ESP_BLANCO_TABLA
                     )
                 else:
-                    if len(col) == max_tam:
-                        seleccion_con_caret = seleccion(col, CURSOR)
+                    if not modificable:
+                        seleccion_cursor = seleccion(col, CURSOR)
+                    elif len(col) == max_tam:
+                        seleccion_cursor = seleccion(col, CURSOR)
                     else:
-                        seleccion_con_caret = seleccion_modificable(col, CURSOR)
+                        seleccion_cursor = seleccion_modificable(col, CURSOR)
                     nueva_col = centrar_linea(
-                        seleccion_con_caret[I_CADENA_COLOR],
+                        seleccion_cursor[I_CADENA_COLOR],
                         max_tam,
-                        seleccion_con_caret[I_TAM_CADENA_COLOR],
+                        seleccion_cursor[I_TAM_CADENA_COLOR],
                         ESP_BLANCO_TABLA
                     ) 
             else:
                 nueva_col = centrar_linea(
                     col,
-                    max_tam + EXTRA_ESP_CURSOR + EXTRA_ESP_CARET,
+                    max_tam + EXTRA_ESP_CURSOR + (EXTRA_ESP_CARET if modificable else 0),
                     len(col),
                     ESP_BLANCO_TABLA
                 )
@@ -596,8 +686,8 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
 
         if len(agregado_modificable) > 0:
             cols_agregado = max([len(fila) for fila in agregado_ordenado])
-            agregados_alineados = __centrar_agregados(
-                agregados=agregado_ordenado,
+            agregados_alineados = __centrar_cuadricula(
+                elementos=agregado_ordenado,
                 max_tam=tam_max_agregado,
                 i_fila_sel=i_fila_seleccion,
                 i_col_sel=i_col_seleccion
@@ -836,7 +926,10 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
         if tecla == Teclas().tec_enter:
             __limpar_cli()
             break
-    
+
+        
+def pantalla_mostrar_informacion():
+    pass
         
 
 if __name__ == '__main__':
