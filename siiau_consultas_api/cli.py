@@ -124,14 +124,15 @@ USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
-TAM_MAX_COLS = 187
-TAM_MAX_FILAS = 44
+TAM_MAX_COLS = 200
+TAM_MAX_FILAS = 200
 MSJ_VACIO = '...'
 MSJ_SIN_ELEMENTOS = 'No hay elementos para mostrar'
 ESP_EXTRA_NOTICIAS = 5
 I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
+ESP_BORDES_TABLA = lambda cols: (2 * cols) + 2
 
 
 def centrar_linea(linea: str, ancho_total: int, ancho_linea: int, relleno: str=' '):
@@ -341,33 +342,56 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         
     i_fila_seleccion = 0
     i_col_seleccion = 0
-    ultimo_tam_cols, ultimo_tam_filas = tam_consola()
-    if ultimo_tam_cols > TAM_MAX_COLS:
-            ultimo_tam_cols = TAM_MAX_COLS
-    if ultimo_tam_filas > TAM_MAX_FILAS:
-            ultimo_tam_filas = TAM_MAX_FILAS
+    if paginar:
+        pagina = 0
+        total_paginas = 0
+        tam_max_pagina = 0
+        
+    if cuadricula:
+        ult_tam_de_filas_cuadricula = 0
+    ultimo_tam_cols_terminal, ultimo_tam_filas_terminal = tam_consola()
+    if ultimo_tam_cols_terminal > TAM_MAX_COLS:
+            ultimo_tam_cols_terminal = TAM_MAX_COLS
+    if ultimo_tam_filas_terminal > TAM_MAX_FILAS:
+            ultimo_tam_filas_terminal = TAM_MAX_FILAS
             
     tam_opcion_mas_grande = max(list(map(lambda opcion: len(opcion.mensaje), opciones)))
 
     __limpar_cli()
     while True:
         if cuadricula :
+            
             # Se calcula el tam. de cada fila para la representacion
             # grafica.
             cuadricula_modificable = list(map(lambda opcion: opcion.mensaje, opciones))
             cuadricula_funciones = list(opciones)
-            tams_filas = sqrt(len(cuadricula_modificable))
-            if tams_filas < int(tams_filas):
-                tams_filas = int(tams_filas) + 1
+            elem_por_fila = sqrt(len(cuadricula_modificable))
+            if elem_por_fila < int(elem_por_fila):
+                elem_por_fila = int(elem_por_fila) + 1
             else:
-                tams_filas = int(tams_filas)
+                elem_por_fila = int(elem_por_fila)
+            ancho_cols = (int(elem_por_fila) * tam_opcion_mas_grande)
+            ancho_cuadricula = ancho_cols + ESP_BORDES_TABLA(elem_por_fila)
+            tam_max_ancho_cuadricula = ultimo_tam_cols_terminal - 30
+            while True:
+                if ancho_cuadricula > tam_max_ancho_cuadricula:
+                    elem_por_fila -= 1
+                    ancho_cols = (int(elem_por_fila) * tam_opcion_mas_grande)
+                    ancho_cuadricula = ancho_cols + ESP_BORDES_TABLA(elem_por_fila)
+                else:
+                    break
+            
+            if elem_por_fila != ult_tam_de_filas_cuadricula:
+                ult_tam_de_filas_cuadricula = elem_por_fila
+                __limpar_cli()
+            
             tams_reales_filas = []
             cant_opciones = len(cuadricula_modificable)
             
             # Se crean los tam de cada fila.
-            while cant_opciones > tams_filas:
-                cant_opciones -= tams_filas
-                tams_reales_filas.append(tams_filas)
+            while cant_opciones > elem_por_fila:
+                cant_opciones -= elem_por_fila
+                tams_reales_filas.append(elem_por_fila)
                 
             # Si sobra, significa que una fila sera menor, y se agrega el
             # sobrane para que se cree dicha fila.
@@ -390,9 +414,9 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         if filas_terminal > TAM_MAX_FILAS:
             filas_terminal = TAM_MAX_FILAS
 
-        if (cols_terminal != ultimo_tam_cols) or (filas_terminal != ultimo_tam_filas):
-            ultimo_tam_cols = cols_terminal
-            ultimo_tam_filas = filas_terminal
+        if (cols_terminal != ultimo_tam_cols_terminal) or (filas_terminal != ultimo_tam_filas_terminal):
+            ultimo_tam_cols_terminal = cols_terminal
+            ultimo_tam_filas_terminal = filas_terminal
             __limpar_cli()
 
         titulo_formateado, len_titulo = titulo(titulo_menu.upper(), 2)
@@ -782,6 +806,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # fila con un elemento, y se mueve el cursor hacia una fila de mas de
             # dos elementos. Lo logico seria que el cursor siguiera en el centro
             # y no se fuera hacia un lado.
+            # TODO hacer que deje de centrar seleccion
             try:
                 tam_seleccion_arriba = len(agregado_ordenado[i_fila_seleccion - 1]) - 1
                 tam_fila_seleccionada = len(agregado_ordenado[i_fila_seleccion]) - 1
