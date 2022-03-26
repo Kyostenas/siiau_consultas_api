@@ -22,7 +22,8 @@ from tabulate import  tabulate
 from typing import NamedTuple, Union, List
 from os import get_terminal_size
 
-MAX_TAM_FILA = 15
+MAX_TAM_COL = 15
+MARGENES_Y_BORDES_TABLA_2_COLS = 7
 
 # TODO mejorar para que pueda recibir tam desado de columnas
 # TODO separar named_tuple_a_tabla en funciones mas legibles
@@ -73,8 +74,8 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                                     indice_para_insertar = i_parte
                                 partes_de_la_parte = parte.split('%')
                                 cuerpo_sub_tabla_informativa.append(partes_de_la_parte)
-                            if len(parte) > MAX_TAM_FILA:
-                                partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_FILA))
+                            if len(parte) > MAX_TAM_COL:
+                                partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_COL))
                         if formar_sub_tabla_informativa:
                             i_parte = 0
                             while i_parte < len(partes) + 1:
@@ -91,7 +92,7 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                             partes.append(subtabla_informativa)
                         nuevo_elemento = '\n'.join(partes)
                     else:
-                        nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_FILA))
+                        nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_COL))
                     nueva_fila.append(nuevo_elemento)
                 nueva_fila = tuple(nueva_fila)
             else:
@@ -102,7 +103,7 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                     if '\\' in col:
                         col = col.replace('\\', '\n')
                     else:
-                        col = '\n'.join([*wrap(col, MAX_TAM_FILA)])
+                        col = '\n'.join([*wrap(col, MAX_TAM_COL)])
                     nueva_fila.append(col)
                 nueva_fila = tuple(nueva_fila)
             cuerpo.append(nueva_fila)
@@ -141,6 +142,28 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         headers=encabezados,
                         tablefmt='plain',
                         numalign='left')
+
+
+def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], espacio_total: int):
+    tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
+    if isinstance(datos, list):
+        filas_tabla = datos
+    else:
+        como_dicc = datos._asdict()
+        llaves = como_dicc.keys()
+        llaves = list(map(lambda x: x.upper().replace('_', ' '), llaves))
+        valores = como_dicc.values()
+        valores = list(map(lambda x: x, valores))
+        filas_tabla = list(zip(llaves, valores))
+        filas_tabla = list(map(list, filas_tabla))
+    encabezados = ['CAMPO', 'VALOR']
+    for i_fila, fila in enumerate(filas_tabla):
+        for i_col, col in enumerate(fila):
+            filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
+    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='presto')
+    
+    return tabla
+
 
 
 if __name__ == '__main__':
