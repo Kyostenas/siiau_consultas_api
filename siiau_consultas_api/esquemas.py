@@ -264,6 +264,10 @@ class Teclas(NamedTuple):
     com_ctrl_x: int = 24
     com_ctrl_y: int = 25
     com_ctrl_z: int = 26
+    com_ctrl_flecha_ar: int = 344
+    com_ctrl_flecha_ab: int = 345
+    com_ctrl_flecha_iz: int = 347
+    com_ctrl_flecha_de: int = 346
 
 tc_ = Teclas()
 LETRAS = tc_[10:62]
