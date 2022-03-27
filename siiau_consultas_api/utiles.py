@@ -267,11 +267,17 @@ def tam_consola() -> Tuple[int, int]:
 
 def barra_progreso(total, progreso, imprimir=False, mensaje='cargando'):
     tam_barra= 30
+    progreso_mostrar = progreso
+    total_mostrar = total
+    if progreso < 0:
+        progreso = 0
+    if progreso > total:
+        progreso = total
     cuanto_relleno = (progreso * tam_barra) // total
     cuanto_vacio = tam_barra - cuanto_relleno
     barra_char = ''.join([f'{"/"*cuanto_relleno}', f'{" "*cuanto_vacio}'])
     barra_prog = ''.join([mensaje, ' [', barra_char, '] ', str(progreso), '|', str(total)])
     if imprimir:
-        pass
+        print_actualizable(barra_prog)
     else:
         return barra_prog
