@@ -139,6 +139,10 @@ ESP_EXTRA_NOTICIAS = 5
 I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
+ESP_TITULO_Y_ESPS_BLANCOS = 7
+TRAZO = 'siiaucli'
+PUNTOS_TEXTO_CORTADO = '...'
+MSJ_OBTENCION = 'se obtuvo: '
 
 
 def __obtener_espacio_bordes_tabla(cols): 
@@ -595,7 +599,6 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             *opciones_formateadas,
             '',
             num_pag,
-            ''
         ]
         if subtitulo_menu != None:
             menu_principal.insert(1, subt_centrado)
@@ -1081,17 +1084,24 @@ def pantalla_carga(total,
                    els_complet, 
                    titulo_carga='cargando', 
                    nombre_elemento='elemento',
-                   elemento=None):
+                   elemento=None,
+                   __logs_descargas=[]):
+    
+    if progreso - 1 < 1:
+        __logs_descargas.clear()
+        print(__logs_descargas)
+    
     cols_terminal, filas_terminal = tam_consola()
     tam_barra = int(cols_terminal * .75) 
     alto_barra = int(filas_terminal * .25)
+    alto_lista_logs = int(filas_terminal * .80) - ESP_TITULO_Y_ESPS_BLANCOS - alto_barra
     progreso_mostrar = progreso
     colores = [
         Back.CYAN,
         Back.BLUE
     ]
+    
     relleno = lambda fill: f'{choice(colores)} {Style.RESET_ALL}' if fill else ' '
-    borde = f'{Back.LIGHTBLACK_EX} {Style.RESET_ALL}'
     if progreso < 0:
         progreso = 0
     if progreso > total:
@@ -1103,8 +1113,36 @@ def pantalla_carga(total,
     elif alto_barra == 1:
         mitad_alto_barra = 0
     
+    if elemento != None:
+        texto_log = MSJ_OBTENCION + elemento
+        tam_correcto_log = tam_barra - len(PUNTOS_TEXTO_CORTADO) - len(f'[ {TRAZO} ] ') - 1
+        try:
+            list(texto_log)[tam_correcto_log]
+            texto_log = texto_log[:tam_correcto_log]
+            texto_log = ''.join([texto_log, PUNTOS_TEXTO_CORTADO])
+        except IndexError:
+            pass
+        nuevo_log = log(texto_log, TRAZO)
+        __logs_descargas.append(nuevo_log)
+
+    logs_centrados = []
+    for un_log, tam_log in __logs_descargas:
+        log_alineado = alinear_linea_izquierda(
+            un_log, 
+            tam_barra, 
+            tam_log,
+            ' '
+        )
+        log_centrado = centrar_linea(
+            log_alineado,
+            cols_terminal,
+            tam_barra,
+            ' '
+        )
+        logs_centrados.append(log_centrado)
+        
     for i_fila_barr in range(alto_barra):
-        porce = round((progreso_mostrar * 100) / total)
+        porce = round(((progreso_mostrar - 1) * 100) / total)
         digs_total_els = len(str(total_els))
         els_complet = str(els_complet).zfill(digs_total_els)
         msj_progreso, len_msj_prog = negativo(f'{porce}% | {els_complet}/{total_els} {nombre_elemento}s')
@@ -1139,22 +1177,32 @@ def pantalla_carga(total,
             len(limpiar_secuencias_ANSI(barra_prog))
         )
         lineas_barra.append(linea_nueva)
+       
+    tam_logs_centrados = len(logs_centrados) 
+    if tam_logs_centrados > alto_lista_logs:
+        slice_para_mostrar = slice(tam_logs_centrados - 1 - alto_lista_logs, -1)
+    else:
+        slice_para_mostrar = slice(0, -1)
         
     encabezados = __formatear_encabezados(cols_terminal)
     titulo_a_mostrar, len_titu = titulo(titulo_carga, 3)
     titulo_a_mostrar = centrar_linea(titulo_a_mostrar, cols_terminal, len_titu)
     cuerpo_pantalla_carga = [
+        '',
+        '',
+        '',
         titulo_a_mostrar,
         '',
         '',
-        *lineas_barra
+        *lineas_barra,
+        '',
+        '',
     ]
-    barra_char = centrar_verticalmente('\n'.join(cuerpo_pantalla_carga), filas_terminal, correccion=6)
-    # if progreso <= 1:
-    #     __limpar_cli()
-    # else:
+    
+    lista_logs = '\n'.join(logs_centrados[slice_para_mostrar])
+    barra_char = '\n'.join(cuerpo_pantalla_carga)
     regresar_cursor_inicio_pantalla()
-    print(encabezados, barra_char)
+    print(encabezados, barra_char, lista_logs)
          
 
 if __name__ == '__main__':
