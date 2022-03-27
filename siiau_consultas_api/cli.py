@@ -139,7 +139,7 @@ ESP_EXTRA_NOTICIAS = 5
 I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
-ESP_TITULO_Y_ESPS_BLANCOS = 7
+ESP_TITULO_Y_ESPS_BLANCOS = 6
 TRAZO = 'siiaucli'
 PUNTOS_TEXTO_CORTADO = '...'
 MSJ_OBTENCION = 'se obtuvo: '
@@ -1094,7 +1094,7 @@ def pantalla_carga(total,
     cols_terminal, filas_terminal = tam_consola()
     tam_barra = int(cols_terminal * .75) 
     alto_barra = int(filas_terminal * .25)
-    alto_lista_logs = int(filas_terminal * .80) - ESP_TITULO_Y_ESPS_BLANCOS - alto_barra
+    alto_lista_logs = int(filas_terminal * .85) - ESP_TITULO_Y_ESPS_BLANCOS - alto_barra
     progreso_mostrar = progreso
     colores = [
         Back.CYAN,
@@ -1190,19 +1190,17 @@ def pantalla_carga(total,
     cuerpo_pantalla_carga = [
         '',
         '',
-        '',
         titulo_a_mostrar,
         '',
         '',
         *lineas_barra,
-        '',
         '',
     ]
     
     lista_logs = '\n'.join(logs_centrados[slice_para_mostrar])
     barra_char = '\n'.join(cuerpo_pantalla_carga)
     regresar_cursor_inicio_pantalla()
-    print(encabezados, barra_char, lista_logs)
+    print(encabezados, barra_char, lista_logs, sep='\n')
          
 
 if __name__ == '__main__':
