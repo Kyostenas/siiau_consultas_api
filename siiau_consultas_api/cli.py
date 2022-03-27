@@ -81,6 +81,11 @@ def titulo(texto: str, margen: int = 1):
     ancho_real = f'{" "*margen}{texto}{" "*margen}'.__len__()
     return f'{Style.BRIGHT}{Fore.WHITE}{Back.CYAN}{" "*margen}{texto}{" "*margen}{Style.RESET_ALL}', ancho_real
 
+
+def negativo(texto: str, margen: int = 1):
+    ancho_real = f'{" "*margen}{texto}{" "*margen}'.__len__()
+    return f'{Style.BRIGHT}{Fore.WHITE}{Back.BLACK}{" "*margen}{texto}{" "*margen}{Style.RESET_ALL}', ancho_real
+
     
 def definicion(concepto: str, definicion: str, margen: int = 1):
     ancho_real = f'{" "*margen}{concepto}{" "*margen} {definicion}'.__len__()
@@ -352,7 +357,7 @@ def __leer_tecla(retornar_original = False):
         else:
             return ord(ch)
 
-
+# FIX cuando pagina sin ser cuadricula, no se puede cambiar página (¿Por qué?)
 def menu_generico_seleccion(opciones: Tuple[Opcion], 
                             principal: bool,
                             memoria_total: dict,
@@ -617,7 +622,6 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             if paginar:
                 pagina += 1
         elif tecla == Teclas().tec_enter:
-            __limpar_cli()
             if cuadricula:
                 funcion_obtenida = malla_funciones[i_fila_seleccion][i_col_seleccion].funcion  # Se obtiene la funcion.
                 nombre_transferencia = malla_funciones[i_fila_seleccion][i_col_seleccion].nombretransf  # Se obtiene el nombre como cadena.
@@ -673,7 +677,7 @@ def __centrar_cuadricula(elementos,
         for i_col, col in enumerate(fila):
             if col == '' and not ((i_fila, i_col) == (i_fila_sel, i_col_sel)):
                 msj_vacio = comentario(MSJ_VACIO)
-                nueva_col = centrar_linea(
+                nueva_col = alinear_linea_izquierda(
                     msj_vacio[I_CADENA_COLOR], 
                     max_tam + EXTRA_ESP_CURSOR + (EXTRA_ESP_CARET if modificable else 0),
                     msj_vacio[I_TAM_CADENA_COLOR],
@@ -682,7 +686,7 @@ def __centrar_cuadricula(elementos,
             elif (i_fila, i_col) == (i_fila_sel, i_col_sel):
                 if col == '':
                     vacio_seleccionado = seleccion(MSJ_VACIO, CURSOR)
-                    nueva_col = centrar_linea(
+                    nueva_col = alinear_linea_izquierda(
                         vacio_seleccionado[I_CADENA_COLOR],
                         max_tam + (EXTRA_ESP_CARET if modificable else 0),
                         vacio_seleccionado[I_TAM_CADENA_COLOR],
@@ -695,14 +699,14 @@ def __centrar_cuadricula(elementos,
                         seleccion_cursor = seleccion(col, CURSOR)
                     else:
                         seleccion_cursor = seleccion_modificable(col, CURSOR)
-                    nueva_col = centrar_linea(
+                    nueva_col = alinear_linea_izquierda(
                         seleccion_cursor[I_CADENA_COLOR],
                         max_tam,
                         seleccion_cursor[I_TAM_CADENA_COLOR],
                         ESP_BLANCO_TABLA
                     ) 
             else:
-                nueva_col = centrar_linea(
+                nueva_col = alinear_linea_izquierda(
                     col,
                     max_tam + EXTRA_ESP_CURSOR + (EXTRA_ESP_CARET if modificable else 0),
                     len(col),
@@ -1079,34 +1083,60 @@ def pantalla_carga(total,
                    nombre_elemento='elemento',
                    elemento=None):
     cols_terminal, filas_terminal = tam_consola()
-    if progreso <= 1:
-        __limpar_cli()
-    else:
-        regresar_cursor_inicio_pantalla()
     tam_barra = int(cols_terminal * .75) 
     alto_barra = int(filas_terminal * .25)
     progreso_mostrar = progreso
-    total_mostrar = total
     colores = [
         Back.CYAN,
         Back.BLUE
     ]
-    relleno = lambda: f'{choice(colores)} {Style.RESET_ALL}'
+    relleno = lambda fill: f'{choice(colores)} {Style.RESET_ALL}' if fill else ' '
     borde = f'{Back.LIGHTBLACK_EX} {Style.RESET_ALL}'
     if progreso < 0:
         progreso = 0
     if progreso > total:
         progreso = total
     cuanto_relleno = (progreso * tam_barra) // total
-    cuanto_vacio = tam_barra - cuanto_relleno
     lineas_barra = []
-    for _ in range(alto_barra):
-        barra_cruda = f'| {"".join([relleno() for _ in range(cuanto_relleno)]) + borde}'
-        barra_cruda += f'{" "*cuanto_vacio} |'
+    if alto_barra >= 2:
+        mitad_alto_barra = alto_barra // 2
+    elif alto_barra == 1:
+        mitad_alto_barra = 0
+    
+    for i_fila_barr in range(alto_barra):
+        porce = round((progreso_mostrar * 100) / total)
+        digs_total_els = len(str(total_els))
+        els_complet = str(els_complet).zfill(digs_total_els)
+        msj_progreso, len_msj_prog = negativo(f'{porce}% | {els_complet}/{total_els} {nombre_elemento}s')
+        if i_fila_barr == mitad_alto_barra:
+            tam_izq_barr = (tam_barra-len_msj_prog) // 2
+            tam_der_barr = (tam_barra-len_msj_prog) - tam_izq_barr
+            izq_barra = "".join([
+                relleno(
+                    True if pos_barra <= cuanto_relleno else False
+                ) 
+                for pos_barra in range(tam_izq_barr)
+            ])
+            der_barra = "".join([
+                relleno(
+                    True if pos_barra <= (cuanto_relleno - len_msj_prog - tam_izq_barr) else False
+                ) 
+                for pos_barra in range(tam_der_barr)
+            ])
+            barra_prog = ''.join([izq_barra, msj_progreso, der_barra])
+        else:
+            barra_prog = "".join([
+                relleno(
+                    True if pos_barra <= cuanto_relleno else False
+                ) 
+                for pos_barra in range(tam_barra)
+            ])
+        barra_prog = ''.join(['|', barra_prog, '|'])
+
         linea_nueva = centrar_linea(
-            barra_cruda,
+            barra_prog,
             cols_terminal,
-            len(limpiar_secuencias_ANSI(barra_cruda))
+            len(limpiar_secuencias_ANSI(barra_prog))
         )
         lineas_barra.append(linea_nueva)
         
@@ -1120,9 +1150,10 @@ def pantalla_carga(total,
         *lineas_barra
     ]
     barra_char = centrar_verticalmente('\n'.join(cuerpo_pantalla_carga), filas_terminal, correccion=6)
-    
-    
-     
+    # if progreso <= 1:
+    #     __limpar_cli()
+    # else:
+    regresar_cursor_inicio_pantalla()
     print(encabezados, barra_char)
          
 
