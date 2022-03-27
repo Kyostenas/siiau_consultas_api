@@ -19,6 +19,7 @@ from .utiles import barra_progreso, tam_consola
 from .servicio_tabla import tabla_dos_columnas_valores
 from .cli import menu_generico_seleccion as menu_gen, sub_titulo
 from .cli import pantalla_agregado_centrada as pantalla_para_agregar
+from .cli import pantalla_carga
 from .cli import pantalla_de_mensajes, __leer_tecla
 from .cli import titulo, advertencia, error, correcto, ayuda, log, seleccion
 from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
@@ -28,7 +29,7 @@ from .servicio_oferta_siiau import estructurar_oferta_como_horario
 
 from typing import List, Tuple
 import os
-
+    
 
 # TODO Agregar interfaz para uso en consola
 
@@ -167,7 +168,8 @@ def __menu_centros() -> CentroCompleto:
         titulo_menu=titulo, 
         memoria_total=memoria_total,
         regresar_en_seleccion=True,
-        cuadricula=True
+        cuadricula=True,
+        
     )
     centro = retorno[MNU_SEL_CENTROS]
     
@@ -199,18 +201,28 @@ def __menu_carreras(centro: CentroCompleto) -> CarreraCompleta:
 
 def __menu_materias(carrera: CarreraCompleta) -> ClaseCompleta:
     titulo = f'materias de {carrera.nombre_completo} ({carrera.ref_carrera})'
+    titulo_barra = f'descargando y procesando datos'
     opciones = []
     materias_carrera = materias(carrera.ref_carrera)
-    for progreso, total, obtenidas in materias_carrera:
+    for progreso, total, obtenidas, ref_elemento, els_comp, els_totales in materias_carrera:
         if obtenidas == None:
-            print(
-                barra_progreso(total, progreso, mensaje='descargando materias'),
-                flush=True, 
-                end='\r'
+            pantalla_carga(
+                total, 
+                progreso,
+                els_totales,
+                els_comp, 
+                titulo_barra, 
+                'materia', 
+                ref_elemento
             )
         else:
             for una_materia in obtenidas:
-                nombre_materia = una_materia.clave
+                una_materia: ClaseCompleta
+                if len(una_materia.titulo) <= 15:
+                    titulo_materia = una_materia.titulo
+                else:
+                    titulo_materia = una_materia.titulo[:15] + "..."
+                nombre_materia = f'{una_materia.clave} {titulo_materia}'
                 def retornar_materia(materia=una_materia): return materia
                 nueva_opcion = Opcion(nombre_materia, retornar_materia, MNU_SEL_MATERIAS)
                 opciones.append(nueva_opcion)
@@ -239,10 +251,6 @@ def __consultar_centros(transferencia_memoria, memoria_total):
     materia = __menu_materias(carrera)
         
     exit(print(tabla_dos_columnas_valores(materia, cols_terminal)))
-        
-
-    
-    
     return transferencia_memoria 
 
 
