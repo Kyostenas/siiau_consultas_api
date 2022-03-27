@@ -420,24 +420,28 @@ def materias(id_carrera: str):
     tabla_materias = particionar(tabla_materias, ancho_tabla)
 
     materias_completas = []
-    completados = 0
+    prog_compl = 0
+    mat_compl = 0
     nones = [1 for renglon_materia in tabla_materias if None in renglon_materia]
     nones = sum(nones)
-    total = (len(tabla_materias) - nones)
-    total = total + (11 * total)
+    materias_total = (len(tabla_materias) - nones)
+    progreso_total = materias_total + (11 * materias_total)
     for renglon_materia in tabla_materias:
         if None not in renglon_materia:  # Ultimo renglón tiene "(c) 2002 Universidad de Guadalajara ..."
             progreso = __obtener_materia_completa(*renglon_materia[RANGO_SUBCLAVE_MATERIAS])
             for paso, total_mat_com, materia_obtenida, _ in progreso:
+                ref_elemento_materia = None
                 if materia_obtenida != None:
                     materia_completa = materia_obtenida
-                completados += 1
-                yield completados, total, None
+                    ref_elemento_materia =  f'{materia_completa.clave} {materia_completa.titulo}'
+                prog_compl += 1
+                yield prog_compl, progreso_total, None, ref_elemento_materia, None, None
             materias_completas.append(materia_completa)
-            completados += 1
-            yield completados, total, None
+            prog_compl += 1
+            mat_compl += 1
+            yield prog_compl, progreso_total, None, None, mat_compl, materias_total
     else:
-        yield completados, total, tuple(materias_completas)
+        yield prog_compl, progreso_total, tuple(materias_completas), None, None, None
 
 
 def __obtener_cookies(resp_inicio) -> str:
