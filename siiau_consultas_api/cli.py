@@ -25,6 +25,7 @@ from .utiles import (limpiar_pantalla,
 from .esquemas import Teclas, Opcion, LETRAS, NUMEROS, LETRAS_DIC, NUMEROS_DIC
 from .getch import getch
 
+from random import choice
 from colorama import Style, Back, Fore, init
 from typing import List, Tuple, Union
 from tabulate import tabulate
@@ -273,7 +274,7 @@ def __formatear_encabezados(cols_terminal) -> str:
     return encabezados
 
 
-def __formatear_indicaciones(tam_espacio, principal: bool) -> str:
+def __formatear_indicaciones(tam_espacio, principal: bool, paginado: bool = False) -> str:
     if principal:
         salir = 'salir'
     else:
@@ -283,6 +284,10 @@ def __formatear_indicaciones(tam_espacio, principal: bool) -> str:
         definicion('ENTER', 'selecc'),
         definicion('Retroc', salir),
     ]
+    if paginado:
+        atajos.append(
+            definicion('Ctrl+flech', 'pag')
+        )
     linea_indicaciones = columnas_en_fila(
         *atajos, 
         alineaciones=[centrar_linea for _ in atajos], 
@@ -370,8 +375,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
     paginar = False
     ultima_cant_filas = 0
         
-    if cuadricula:
-        ult_tam_de_filas_cuadricula = 0
+    ult_tam_de_filas_cuadricula = 0
     ultimo_tam_cols_terminal, ultimo_tam_filas_terminal = tam_consola()
     if ultimo_tam_cols_terminal > TAM_MAX_COLS:
             ultimo_tam_cols_terminal = TAM_MAX_COLS
@@ -497,7 +501,6 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                     opciones,
                     *partes_particion
                 )
-                
                 total_paginas = len(opciones)
                 try:
                     opciones = opciones[pagina]
@@ -551,7 +554,8 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 i_fila_seleccion = (len(opciones) - 1)
 
         encabezados_formados = __formatear_encabezados(cols_terminal)
-        indicaciones = __formatear_indicaciones(cols_terminal, principal)
+        indicaciones_pag = True if paginar else False
+        indicaciones = __formatear_indicaciones(cols_terminal, principal, indicaciones_pag)
         
         if cuadricula:
             lineas_cuadricula = __centrar_cuadricula(
@@ -559,7 +563,8 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 tam_opcion_mas_grande,
                 i_fila_seleccion,
                 i_col_seleccion,
-                modificable=False
+                modificable=False,
+                alineacion='left'
             )
             opciones_formateadas = list(map(
                 lambda linea: centrar_linea(
@@ -573,10 +578,10 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             opciones_formateadas = __formatear_opciones(opciones, i_fila_seleccion, cols_terminal)
         
         if paginar:
-            paginas, len_pags = comentario(f'PAG {pagina + 1}/{total_paginas}')
-            paginas = centrar_linea(paginas, cols_terminal, len_pags)
+            num_pag, len_num_pag = comentario(f'PAG {pagina + 1}/{total_paginas}')
+            num_pag = centrar_linea(num_pag, cols_terminal, len_num_pag)
         else:
-            paginas = ''
+            num_pag = ''
 
         menu_principal = [
             titulo_centrado,
@@ -584,7 +589,7 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             '',
             *opciones_formateadas,
             '',
-            paginas,
+            num_pag,
             ''
         ]
         if subtitulo_menu != None:
@@ -602,13 +607,9 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         elif tecla == Teclas().tec_flecha_iz:
             if cuadricula:
                 i_col_seleccion -= 1
-            else:
-                pass
         elif tecla == Teclas().tec_flecha_de:
             if cuadricula:
                 i_col_seleccion += 1
-            else:
-                pass
         elif tecla == Teclas().com_ctrl_flecha_iz:
             if paginar:
                 pagina -= 1
@@ -660,7 +661,12 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         regresar_cursor_inicio_pantalla()
         
         
-def __centrar_cuadricula(elementos, max_tam, i_fila_sel, i_col_sel, modificable=True):
+def __centrar_cuadricula(elementos, 
+                         max_tam, 
+                         i_fila_sel, 
+                         i_col_sel,
+                         modificable=True,
+                         alineacion='center'):
     lineas_checadas = []
     for i_fila, fila in enumerate(elementos):
         para_hacer_linea = []
@@ -705,7 +711,7 @@ def __centrar_cuadricula(elementos, max_tam, i_fila_sel, i_col_sel, modificable=
             para_hacer_linea.append(nueva_col)
         lineas_checadas.append(para_hacer_linea)
     
-    lineas_en_columnas = tabulate(lineas_checadas, tablefmt='orgtbl', stralign='center')
+    lineas_en_columnas = tabulate(lineas_checadas, tablefmt='orgtbl', stralign=alineacion)
     lineas_en_columnas = lineas_en_columnas.replace(ESP_BLANCO_TABLA, ' ').splitlines()
         
     return lineas_en_columnas
@@ -1063,7 +1069,62 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
         
 def pantalla_mostrar_informacion():
     pass
+
+
+def pantalla_carga(total, 
+                   progreso,
+                   total_els,
+                   els_complet, 
+                   titulo_carga='cargando', 
+                   nombre_elemento='elemento',
+                   elemento=None):
+    cols_terminal, filas_terminal = tam_consola()
+    if progreso <= 1:
+        __limpar_cli()
+    else:
+        regresar_cursor_inicio_pantalla()
+    tam_barra = int(cols_terminal * .75) 
+    alto_barra = int(filas_terminal * .25)
+    progreso_mostrar = progreso
+    total_mostrar = total
+    colores = [
+        Back.CYAN,
+        Back.BLUE
+    ]
+    relleno = lambda: f'{choice(colores)} {Style.RESET_ALL}'
+    borde = f'{Back.LIGHTBLACK_EX} {Style.RESET_ALL}'
+    if progreso < 0:
+        progreso = 0
+    if progreso > total:
+        progreso = total
+    cuanto_relleno = (progreso * tam_barra) // total
+    cuanto_vacio = tam_barra - cuanto_relleno
+    lineas_barra = []
+    for _ in range(alto_barra):
+        barra_cruda = f'| {"".join([relleno() for _ in range(cuanto_relleno)]) + borde}'
+        barra_cruda += f'{" "*cuanto_vacio} |'
+        linea_nueva = centrar_linea(
+            barra_cruda,
+            cols_terminal,
+            len(limpiar_secuencias_ANSI(barra_cruda))
+        )
+        lineas_barra.append(linea_nueva)
         
+    encabezados = __formatear_encabezados(cols_terminal)
+    titulo_a_mostrar, len_titu = titulo(titulo_carga, 3)
+    titulo_a_mostrar = centrar_linea(titulo_a_mostrar, cols_terminal, len_titu)
+    cuerpo_pantalla_carga = [
+        titulo_a_mostrar,
+        '',
+        '',
+        *lineas_barra
+    ]
+    barra_char = centrar_verticalmente('\n'.join(cuerpo_pantalla_carga), filas_terminal, correccion=6)
+    
+    
+     
+    print(encabezados, barra_char)
+         
 
 if __name__ == '__main__':
     print('Esto no se deberia mostrar. Ejecutando desde cli.py')
