@@ -435,13 +435,13 @@ def materias(id_carrera: str):
                     materia_completa = materia_obtenida
                     ref_elemento_materia =  f'{materia_completa.clave} {materia_completa.titulo}'
                 prog_compl += 1
-                yield prog_compl, progreso_total, None, ref_elemento_materia, None, None
+                yield prog_compl, progreso_total, None, ref_elemento_materia, mat_compl, materias_total
             materias_completas.append(materia_completa)
             prog_compl += 1
             mat_compl += 1
             yield prog_compl, progreso_total, None, None, mat_compl, materias_total
     else:
-        yield prog_compl, progreso_total, tuple(materias_completas), None, None, None
+        yield prog_compl, progreso_total, tuple(materias_completas), None, mat_compl, materias_total
 
 
 def __obtener_cookies(resp_inicio) -> str:
