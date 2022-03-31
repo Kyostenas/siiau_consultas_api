@@ -1,7 +1,5 @@
 from distutils.core import setup
 
-from importlib_metadata import entry_points
-
 def readfile(filename):
   with open(filename, 'r+') as f:
     return f.read()
