@@ -131,8 +131,8 @@ PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
 ENC_PIE_BORDE = ENC_PIE + 12
-TAM_MAX_COLS = 200
-TAM_MAX_FILAS = 200
+MAX_TAM_COLS = 200
+MAX_TAM_FILAS = 200
 MSJ_VACIO = '...'
 MSJ_SIN_ELEMENTOS = 'No hay elementos para mostrar'
 ESP_EXTRA_NOTICIAS = 5
@@ -140,9 +140,16 @@ I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
 ESP_TITULO_Y_ESPS_BLANCOS = 6
+ESP_CORRECCION_COLS_TERMINAL = 1
 TRAZO = 'siiaucli'
 PUNTOS_TEXTO_CORTADO = '...'
 MSJ_OBTENCION = 'se obtuvo: '
+PRIMERA_PAGINA = 0
+TECLAS = Teclas()
+
+
+def despedida():
+    print('Hasta luego')
 
 
 def __obtener_espacio_bordes_tabla(cols): 
@@ -272,13 +279,15 @@ def __formatear_opciones(opciones: Tuple[Opcion], i_seleccion: int, cols_termina
 
 def __formatear_encabezados(cols_terminal) -> str:
     usuario, len_usua = sub_titulo(USUARIO_DEFECTO)
-    encabezados = columnas_en_fila((PROGRAMA, LEN_PROG),
-                                   (usuario, len_usua),
-                                   alineaciones=(
-                                       centrar_linea,
-                                       centrar_linea,
-                                   ),
-                                   ancho_total=cols_terminal)
+    encabezados = columnas_en_fila(
+        (PROGRAMA, LEN_PROG),
+        (usuario, len_usua),
+        alineaciones=(
+            centrar_linea,
+            centrar_linea,
+        ),
+        ancho_total=cols_terminal
+    )
     
     return encabezados
 
@@ -386,10 +395,10 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
         
     ult_tam_de_filas_cuadricula = 0
     ultimo_tam_cols_terminal, ultimo_tam_filas_terminal = tam_consola()
-    if ultimo_tam_cols_terminal > TAM_MAX_COLS:
-            ultimo_tam_cols_terminal = TAM_MAX_COLS
-    if ultimo_tam_filas_terminal > TAM_MAX_FILAS:
-            ultimo_tam_filas_terminal = TAM_MAX_FILAS
+    if ultimo_tam_cols_terminal > MAX_TAM_COLS:
+            ultimo_tam_cols_terminal = MAX_TAM_COLS
+    if ultimo_tam_filas_terminal > MAX_TAM_FILAS:
+            ultimo_tam_filas_terminal = MAX_TAM_FILAS
             
     tam_opcion_mas_grande = max(list(map(lambda opcion: len(opcion.mensaje), opciones)))
 
@@ -445,10 +454,10 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                                                    *tams_reales_filas)
                   
         cols_terminal, filas_terminal = tam_consola()
-        if cols_terminal > TAM_MAX_COLS:
-            cols_terminal = TAM_MAX_COLS
-        if filas_terminal > TAM_MAX_FILAS:
-            filas_terminal = TAM_MAX_FILAS
+        if cols_terminal > MAX_TAM_COLS:
+            cols_terminal = MAX_TAM_COLS
+        if filas_terminal > MAX_TAM_FILAS:
+            filas_terminal = MAX_TAM_FILAS
 
         if (cols_terminal != ultimo_tam_cols_terminal) or (filas_terminal != ultimo_tam_filas_terminal):
             ultimo_tam_cols_terminal = cols_terminal
@@ -758,10 +767,10 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
     i_fila_seleccion = 0
     i_col_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
-    if ultimo_tam_cols > TAM_MAX_COLS:
-            ultimo_tam_cols = TAM_MAX_COLS
-    if ultimo_tam_filas > TAM_MAX_FILAS:
-            ultimo_tam_filas = TAM_MAX_FILAS
+    if ultimo_tam_cols > MAX_TAM_COLS:
+            ultimo_tam_cols = MAX_TAM_COLS
+    if ultimo_tam_filas > MAX_TAM_FILAS:
+            ultimo_tam_filas = MAX_TAM_FILAS
             
     indicaciones = (
         ('flech', 'moverse'),
@@ -815,10 +824,10 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                                  *tams_reales_filas)
         
         cols_terminal, filas_terminal = tam_consola()
-        if cols_terminal > TAM_MAX_COLS:
-            cols_terminal = TAM_MAX_COLS
-        if filas_terminal > TAM_MAX_FILAS:
-            filas_terminal = TAM_MAX_FILAS
+        if cols_terminal > MAX_TAM_COLS:
+            cols_terminal = MAX_TAM_COLS
+        if filas_terminal > MAX_TAM_FILAS:
+            filas_terminal = MAX_TAM_FILAS
         
         # Para hacer bucle de selecccion.
         # Se llega al final regresa al comienzo y viceversa
@@ -1035,10 +1044,10 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
     )
     
     cols_terminal, filas_terminal = tam_consola()
-    if cols_terminal > TAM_MAX_COLS:
-            cols_terminal = TAM_MAX_COLS
-    if filas_terminal > TAM_MAX_FILAS:
-            filas_terminal = TAM_MAX_FILAS
+    if cols_terminal > MAX_TAM_COLS:
+            cols_terminal = MAX_TAM_COLS
+    if filas_terminal > MAX_TAM_FILAS:
+            filas_terminal = MAX_TAM_FILAS
     
     todas = errores + advertencias + correctos + ayudas
     max_tam_todas = max(list(map(lambda x: len(x) + ESP_EXTRA_NOTICIAS, todas)))
@@ -1072,10 +1081,297 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
         if tecla == Teclas().tec_enter:
             __limpar_cli()
             break
+        
+        
+def __comprobar_ult_tam_consola(cols_terminal: int, 
+                                filas_terminal: int, 
+                                ult_tam_cols_terminal: int, 
+                                ult_tam_filas_terminal: int):
+    """
+    Compara el nuevo tam de consola obtenido con el útlimo.
+    
+    retorna
+    -------
+    ```
+    (ult_tam_cols: int, ult_tam_filas: int, limpiar_cli: bool)
+    ```
+    """
+    
+    ult_tam_cols = ult_tam_cols_terminal
+    ult_tam_filas = ult_tam_filas_terminal
+    limpiar_cli = False
+    if cols_terminal != ult_tam_cols_terminal:
+        ult_tam_cols_terminal = cols_terminal
+        if limpiar_cli is False:
+            limpiar_cli = True
+    if filas_terminal != ult_tam_filas_terminal:
+        ult_tam_filas_terminal = filas_terminal
+        if limpiar_cli is False:
+            limpiar_cli = True
+        
+    return ult_tam_cols, ult_tam_filas, limpiar_cli
+
+
+def __comprobar_medidas_max_consola(cols_terminal: int, filas_terminal: int):
+    """
+    Comprueba que la medida actual de la consola no exceda el máximo
+    establecido.
+    
+    retorna
+    -------
+    ```
+    (cols: int, filas: int)
+    ```
+    """
+    cols = cols_terminal if cols_terminal < MAX_TAM_COLS else MAX_TAM_COLS
+    filas = filas_terminal if filas_terminal < MAX_TAM_FILAS else MAX_TAM_FILAS
+    return cols, filas
+
+
+def __definir_indicaciones_pantalla_informacion(cant_paginas: int):
+    """
+    Retorna las indicaciones para la pantalla de informacion por
+    páginas. Si solo es una página o ninguna, no genera la indicación
+    para cambiar de página.
+    
+    retorna
+    -------
+    ```
+    indicacione: tuple
+    ```
+    """
+    if cant_paginas <= 1:
+        indicaciones = (
+            ('/\ \/ < >', 'moverse'),
+            ('Retrc', 'regresar')
+        )
+    else:
+        indicaciones = (
+            ('/\ \/ < >', 'moverse'),
+            ('Ctrl+flech', 'pag')
+            ('Retrc', 'regresar')
+        )
+        
+    return indicaciones
+
+
+def __calcular_rangos_pagina(cant_renglones: int,
+                             renglon_mas_grande: int,
+                             tam_vertical: int, 
+                             tam_horizontal: int,
+                             pos_vertical: int,
+                             poas_horizontal: int,
+                             factor_avanze):
+    """
+    Genera los rangos para truncar una página.
+    
+    retorna
+    ------
+    ```
+    (rango_vertical: slice, rango_horizontal: slice)
+    ```
+    """
+    
+    avanze_vertical = pos_vertical * factor_avanze
+    avanze_horizontal = poas_horizontal * factor_avanze
+    comienzo_vertical = 0 + avanze_vertical
+    comienzo_horizontal = 0 + avanze_horizontal
+    final_vertical = tam_vertical + avanze_vertical
+    final_horizontal = tam_horizontal + avanze_horizontal
+    
+    if final_vertical > cant_renglones:
+        diferencia = final_vertical - cant_renglones
+        comienzo_vertical -= diferencia
+        final_vertical -= diferencia
+    if final_horizontal > renglon_mas_grande:
+        diferencia = final_horizontal - renglon_mas_grande
+        comienzo_horizontal -= diferencia
+        final_horizontal -= diferencia
+        
+    rango_vertical = slice(comienzo_vertical, final_vertical)
+    rango_horizintal = slice(comienzo_horizontal, final_horizontal)
+    
+    return rango_vertical, rango_horizintal
+
+
+def __renglon_mas_grande_pagina(pagina: str):
+    """
+    Retorna la cadena de texto mas grande de una página.
+    
+    Si recibe una cadena de un solo renglón, returna su
+    tam.
+    
+    parámetros
+    ----------
+    pagina: ``'pagina con varios renglones\\nque incluyen retornos...'``
+    
+    retorna
+    -------
+    ```
+    (renglon_mas_grande: int, cantidad_renglones: int, tams: list[int])
+    ```
+    """
+    renglones = pagina.splitlines()  # Se obtienen los renglones de la pagina por separado.
+    cantidad_renglones = len(renglones)  # Se cuentan los renglones
+    tams = list(map(len, renglones))  # Se obtiene el tam de cada renglon.  
+    renglon_mas_grande = max(tams)  # Se obtiene el tam max.
+    
+    return renglon_mas_grande, cantidad_renglones, tams
+    
+    
+def __comprobar_num_pagina(ult_pagina: int, pag_seleccionada: int):
+    """
+    Comprueba si el numero de pagina existe.
+    
+    retorna
+    -------
+    ```
+    pag_corregida: int  
+    ```
+    """
+    pag_corregida = pag_seleccionada
+    if pag_seleccionada > ult_pagina:
+        pag_corregida = ult_pagina
+    elif pag_seleccionada < 0:
+        pag_corregida = 0
+        
+    return pag_corregida
+
+
+def __truncar_pagina(pagina: str, rango_vertical: slice, rango_horizontal: slice):
+    """
+    Trunca la página según los rangos dados.
+    
+    retorna
+    -------
+    ```
+    lineas_pagina_truncada: list
+    ```
+    """
+    renglones = pagina.splitlines()
+    truncado_vertical = renglones[rango_vertical]
+    lineas_pagina_truncada = list(map(
+        lambda renglon: renglon[rango_horizontal],
+        truncado_vertical
+    ))
+    
+    return lineas_pagina_truncada
 
         
-def pantalla_mostrar_informacion():
-    pass
+def pantalla_informacion_en_paginas(titulo_pantalla: str, 
+                                    paginas: List[Tuple[str, str]]):
+    """
+    pantalla_informacion_en_paginas
+    ===============================
+    
+    Crea pantalla para ver páginas de información que se adapta al tam de
+    la consola.
+    
+    Una página hace referencia a una cadena de texto con más de un renglón,
+    (al menos un salto de página "\\n").
+    
+    parámetros
+    ----------
+    titulo_pantalla: ``'titulo general'``
+    paginas: ``[('titulo pagina', 'pagina...'), ...]``
+    
+    """
+    PRIMERA_PAGINA = 0
+    
+    ultam_cols_term = 0 
+    ultam_fls_term = 0
+    num_pag_selec = 0
+    posicion_hori = 0
+    posicion_vert = 0
+    factor_avanze = 2
+    
+    renglones_pags: List[Tuple[int, int, List[int]]] = []
+    for _, pagina in paginas:
+        renglones_pags.append(__renglon_mas_grande_pagina(pagina))
+        
+    total_paginas = len(paginas)
+    ult_pagina = total_paginas - 1
+    indicaciones = __definir_indicaciones_pantalla_informacion(total_paginas)
+    
+    __limpar_cli()
+    while True:
+        num_pag_selec = __comprobar_num_pagina(ult_pagina, num_pag_selec)
+        cols_terminal, filas_terminal = tam_consola()
+        ultam_cols_term, ultam_fls_term, limpiar = __comprobar_ult_tam_consola(
+            cols_terminal=cols_terminal,
+            filas_terminal=filas_terminal,
+            ult_tam_cols_terminal=ultam_cols_term,
+            ult_tam_filas_terminal=ultam_fls_term
+        )
+        __limpar_cli() if limpiar else None
+        cols_terminal, filas_terminal = __comprobar_medidas_max_consola(
+            cols_terminal=cols_terminal,
+            filas_terminal=filas_terminal
+        )
+        
+        try:
+            titulo_pagina, pagina_actual = paginas[num_pag_selec]
+            renglon_mas_grande_pag, cant_renglones, tams_reng = renglones_pags[num_pag_selec]
+        except IndexError:
+            num_pag_selec = PRIMERA_PAGINA
+            titulo_pagina, pagina_actual = paginas[num_pag_selec]
+            renglon_mas_grande_pag, cant_renglones, tams_reng = renglones_pags[num_pag_selec]
+            
+        max_tam_vertical = filas_terminal - ESP_TITULO_Y_ESPS_BLANCOS
+        max_tam_horizontal = cols_terminal - ESP_CORRECCION_COLS_TERMINAL
+        rango_vertical, rango_horizontal = __calcular_rangos_pagina(
+            cant_renglones=cant_renglones,
+            renglon_mas_grande=renglon_mas_grande_pag,
+            tam_vertical=max_tam_vertical,
+            tam_horizontal=max_tam_horizontal,
+            pos_vertical=posicion_vert,
+            poas_horizontal=posicion_hori,
+            factor_avanze=factor_avanze
+        )
+        pagina_truncada = __truncar_pagina(
+            pagina=pagina_actual,
+            rango_vertical=rango_vertical,
+            rango_horizontal=rango_horizontal
+        )
+                
+        encabezados = __formatear_encabezados(cols_terminal)
+        titulo_color, tam_titulo_color = titulo(titulo_pantalla, 2)
+        subt_color, tam_subt_color = sub_titulo(titulo_pagina)
+        titulo_centrado = centrar_linea(titulo_color, cols_terminal, tam_titulo_color)
+        subt_centrado = centrar_linea(subt_color, cols_terminal, tam_subt_color)
+        pie = __indicaciones_personalizadas(indicaciones, cols_terminal)
+
+        pagina_centrada = list(map(
+            lambda linea: centrar_linea(linea, cols_terminal, len(linea)),
+            pagina_truncada
+        ))
+        pagina_a_mostrar = '\n'.join(pagina_centrada)
+        
+        titulo_subt = '\n'.join([titulo_centrado, subt_centrado])
+        print(encabezados, '' , titulo_subt, pagina_a_mostrar, pie, sep='\n')
+        
+        tecla = __leer_tecla()
+        if tecla == TECLAS.com_ctrl_flecha_iz:
+            pagina -= 1
+        elif tecla == TECLAS.com_ctrl_flecha_de:
+            pagina += 1
+        if tecla == TECLAS.tec_flecha_iz:
+            posicion_hori -= 1
+        elif tecla == TECLAS.tec_flecha_de:
+            posicion_hori += 1
+        elif tecla == TECLAS.tec_flecha_ar:
+            posicion_vert -= 1
+        elif tecla == TECLAS.tec_flecha_ab:
+            posicion_vert += 1
+        elif tecla == TECLAS.com_ctrl_c:
+            exit(despedida())
+        elif tecla == TECLAS.tec_retroceso:
+            return
+        
+        regresar_cursor_inicio_pantalla()
+        
+        # exit()
+    
 
 
 def pantalla_carga(total, 
