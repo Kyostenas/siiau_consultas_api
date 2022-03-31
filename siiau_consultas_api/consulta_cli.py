@@ -17,15 +17,17 @@
 
 from .utiles import barra_progreso, tam_consola
 from .servicio_tabla import tabla_dos_columnas_valores
-from .cli import menu_generico_seleccion as menu_gen, sub_titulo
-from .cli import pantalla_agregado_centrada as pantalla_para_agregar
-from .cli import pantalla_carga
-from .cli import pantalla_de_mensajes, __leer_tecla
-from .cli import titulo, advertencia, error, correcto, ayuda, log, seleccion
 from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
 from .getch import getch
 from .servicio_consulta_siiau import oferta_academica, Siiau, centros, carreras, materias
 from .servicio_oferta_siiau import estructurar_oferta_como_horario
+from .cli import menu_generico_seleccion as menu_gen, sub_titulo
+from .cli import pantalla_agregado_centrada as pantalla_para_agregar
+from .cli import titulo, advertencia, error, correcto, ayuda, log, seleccion
+from .cli import (pantalla_carga,
+                  pantalla_informacion_en_paginas,
+                  pantalla_de_mensajes,
+                  __leer_tecla)
 
 from typing import List, Tuple
 import os
@@ -171,7 +173,10 @@ def __menu_centros() -> CentroCompleto:
         cuadricula=True,
         
     )
-    centro = retorno[MNU_SEL_CENTROS]
+    try:
+        centro = retorno[MNU_SEL_CENTROS]
+    except KeyError:
+        centro = None
     
     return centro
 
@@ -194,16 +199,20 @@ def __menu_carreras(centro: CentroCompleto) -> CarreraCompleta:
         regresar_en_seleccion=True,
         cuadricula=True
     )
-    carrera = retorno[MNU_SEL_CARRERAS]
+    try:
+        carrera = retorno[MNU_SEL_CARRERAS]
+    except KeyError:
+        carrera = None
+        
     
     return carrera
 
 
-def __menu_materias(carrera: CarreraCompleta) -> ClaseCompleta:
-    titulo = f'materias de {carrera.nombre_completo} ({carrera.ref_carrera})'
+def __menu_materias(materia: CarreraCompleta) -> ClaseCompleta:
+    titulo = f'materias de {materia.nombre_completo} ({materia.ref_carrera})'
     titulo_barra = f'descargando y procesando datos'
     opciones = []
-    materias_carrera = materias(carrera.ref_carrera)
+    materias_carrera = materias(materia.ref_carrera)
     for progreso, total, obtenidas, ref_elemento, els_comp, els_totales in materias_carrera:
         if obtenidas == None:
             pantalla_carga(
@@ -235,9 +244,12 @@ def __menu_materias(carrera: CarreraCompleta) -> ClaseCompleta:
         regresar_en_seleccion=True,
         cuadricula=True
     )
-    carrera = retorno[MNU_SEL_MATERIAS]
+    try:
+        materia = retorno[MNU_SEL_MATERIAS]
+    except KeyError:
+        materia = None
     
-    return carrera
+    return materia
 
 
 def __consultar_centros(transferencia_memoria, memoria_total):
@@ -247,10 +259,19 @@ def __consultar_centros(transferencia_memoria, memoria_total):
     cols_terminal, _ = tam_consola()
 
     centro = __menu_centros()
-    carrera = __menu_carreras(centro)
-    materia = __menu_materias(carrera)
+    carrera = None
+    materia = None
+    if centro != None:
+        carrera = __menu_carreras(centro)
+    if carrera != None:
+        materia = __menu_materias(carrera)
+    if materia != None:
+        tabla_materia = tabla_dos_columnas_valores(materia, cols_terminal)
+        pantalla_informacion_en_paginas(
+            titulo_pantalla='INFORMACION DE MATERIA',
+            paginas=[(materia.clave, tabla_materia)]
+        )
         
-    exit(print(tabla_dos_columnas_valores(materia, cols_terminal)))
     return transferencia_memoria 
 
 
