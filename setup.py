@@ -1,4 +1,7 @@
+import os
 from distutils.core import setup
+
+from siiau_consultas_api.utiles import leer_json
 
 def readfile(filename):
   with open(filename, 'r+') as f:
@@ -7,10 +10,10 @@ def readfile(filename):
 setup(
   name = 'siiau-consultas-api',         
   packages = ['siiau_consultas_api'],   
-  version = '0.0.1',      
+  version = leer_json(f'.{os.sep}package.json')['version'],      
   description = 'Consulta información del SIIAU de la UDG',
-  long_description=readfile('README.rst'),
-  long_description_content_type='text/x-rst',
+  long_description=readfile('README.md'),
+  long_description_content_type='text/markdown',
   author = 'Benjamin Ramirez',                   
   author_email = 'chilerito12@gmail.com',      
   url = 'https://github.com/Kyostenas/siiau_consultas_api',   
@@ -28,7 +31,7 @@ setup(
     'alive-progress==2.3.1',
   ],
   classifiers=[
-    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',   
+    'License :: OSI Approved :: GPL',   
     'Programming Language :: Python :: 3',      
     'Programming Language :: Python :: 3.8',
     'Development Status :: 1 - Planning'

@@ -1155,6 +1155,45 @@ def __definir_indicaciones_pantalla_informacion(cant_paginas: int):
     return indicaciones
 
 
+def __comprobar_posicion(mininmo: int, maximo: int, posicion: int):
+    """
+    Se asegura que el valor posicion no exceda el maximo ni sea menor
+    al minimo; si cruzan los límites retorna el maximo o minimo según sea
+    requerido pero si no lo hacen retorna la posición.
+    
+    retorna
+    ------
+    ```
+    minimo: int | maximo: int | posicion: int
+    ```
+    """
+    if posicion < mininmo:
+        return mininmo
+    elif posicion > maximo:
+        return maximo
+    else:
+        return posicion
+    
+    
+def __calcular_limite_pagina(tam_pagina, tam_total_dimension):
+    """
+    Calcula los límites vertical y horizontal de la página
+    utilizando el tam designado de página (tam de visualización).
+    
+    retorna
+    ------
+    ```
+    minimo: int | maximo: int | posicion: int
+    ```
+    """
+    if tam_total_dimension > tam_pagina:
+        limite_pagina = tam_total_dimension - tam_pagina
+    else:
+        limite_pagina = 0
+    
+    return limite_pagina
+
+
 def __calcular_rangos_pagina(cant_renglones: int,
                              renglon_mas_grande: int,
                              tam_vertical: int, 
@@ -1171,22 +1210,14 @@ def __calcular_rangos_pagina(cant_renglones: int,
     (rango_vertical: slice, rango_horizontal: slice)
     ```
     """
-    
-    avanze_vertical = pos_vertical * factor_avanze
-    avanze_horizontal = poas_horizontal * factor_avanze
-    comienzo_vertical = 0 + avanze_vertical
-    comienzo_horizontal = 0 + avanze_horizontal
-    final_vertical = tam_vertical + avanze_vertical
-    final_horizontal = tam_horizontal + avanze_horizontal
-    
-    if final_vertical > cant_renglones:
-        diferencia = final_vertical - cant_renglones
-        comienzo_vertical -= diferencia
-        final_vertical -= diferencia
-    if final_horizontal > renglon_mas_grande:
-        diferencia = final_horizontal - renglon_mas_grande
-        comienzo_horizontal -= diferencia
-        final_horizontal -= diferencia
+
+    limite_comienzo_vertical = __calcular_limite_pagina(tam_vertical, cant_renglones)
+    limite_comienzo_horizontal = __calcular_limite_pagina(tam_horizontal, renglon_mas_grande)
+
+    comienzo_vertical = __comprobar_posicion(0, limite_comienzo_vertical, pos_vertical)
+    comienzo_horizontal = __comprobar_posicion(0, limite_comienzo_horizontal, poas_horizontal)
+    final_vertical = __comprobar_posicion(tam_vertical, cant_renglones, pos_vertical)
+    final_horizontal = __comprobar_posicion(tam_horizontal, renglon_mas_grande, poas_horizontal)
         
     rango_vertical = slice(comienzo_vertical, final_vertical)
     rango_horizintal = slice(comienzo_horizontal, final_horizontal)
@@ -1254,6 +1285,9 @@ def __truncar_pagina(pagina: str, rango_vertical: slice, rango_horizontal: slice
         lambda renglon: renglon[rango_horizontal],
         truncado_vertical
     ))
+    
+    # print([rango_vertical], [rango_horizontal])
+    # exit()
     
     return lineas_pagina_truncada
 
@@ -1341,11 +1375,11 @@ def pantalla_informacion_en_paginas(titulo_pantalla: str,
         subt_centrado = centrar_linea(subt_color, cols_terminal, tam_subt_color)
         pie = __indicaciones_personalizadas(indicaciones, cols_terminal)
 
-        pagina_centrada = list(map(
-            lambda linea: centrar_linea(linea, cols_terminal, len(linea)),
-            pagina_truncada
-        ))
-        pagina_a_mostrar = '\n'.join(pagina_centrada)
+        # pagina_centrada = list(map(
+        #     lambda linea: centrar_linea(linea, cols_terminal, len(linea)),
+        #     pagina_truncada
+        # ))
+        pagina_a_mostrar = '\n'.join(pagina_truncada)
         
         titulo_subt = '\n'.join([titulo_centrado, subt_centrado])
         print(encabezados, '' , titulo_subt, pagina_a_mostrar, pie, sep='\n')
@@ -1392,12 +1426,8 @@ def pantalla_carga(total,
     alto_barra = int(filas_terminal * .25)
     alto_lista_logs = int(filas_terminal * .85) - ESP_TITULO_Y_ESPS_BLANCOS - alto_barra
     progreso_mostrar = progreso
-    colores = [
-        Back.CYAN,
-        Back.BLUE
-    ]
     
-    relleno = lambda fill: f'{choice(colores)} {Style.RESET_ALL}' if fill else ' '
+    relleno = lambda fill: f'{Back.BLUE} {Style.RESET_ALL}' if fill else ' '
     if progreso < 0:
         progreso = 0
     if progreso > total:
@@ -1497,6 +1527,8 @@ def pantalla_carga(total,
     barra_char = '\n'.join(cuerpo_pantalla_carga)
     regresar_cursor_inicio_pantalla()
     print(encabezados, barra_char, lista_logs, sep='\n')
+    
+
          
 
 if __name__ == '__main__':

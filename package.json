@@ -1,0 +1,53 @@
+{
+  "name": "siiau_consultas_api",
+  "version": "0.0.1",
+  "description": "Consulta información del SIIAU de la UDG",
+  "main": " ",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "getversion": "npm -s run env echo '$npm_package_version'",
+    "install-local-linux": "pip3 uninstall siiau-consultas-api -y && python3 setup.py bdist_wheel && VERSION=`npm -s run env echo '$npm_package_version'` && pip3 install dist/siiau_consultas_api-$VERSION-py3-none-any.whl",
+    "install-local-windows": "",
+    "release": "standard-version"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kyostenas/siiau_consultas_api.git"
+  },
+  "keywords": [
+    "console",
+    "cli",
+    "siiau",
+    "udg"
+  ],
+  "author": "Benjamin Ramirez",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Kyostenas/siiau_consultas_api/issues"
+  },
+  "homepage": "https://github.com/Kyostenas/siiau_consultas_api#readme",
+  "config": {
+    "commitzen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS",
+      "pre-commit": "lint-staged"
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^16.2.3",
+    "@commitlint/config-conventional": "^16.2.1",
+    "commitizen": "^4.2.4",
+    "conventional-github-releaser": "^3.1.5",
+    "eslint": "^8.12.0",
+    "git-authors-cli": "^1.0.39",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.7",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.6.2",
+    "standard-version": "^9.3.2"
+  }
+}

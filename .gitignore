@@ -1,3 +1,8 @@
+
+#node
+node_modules/
+*.js
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -144,7 +149,7 @@ static
 
 # data files
 *.dat
-*.json
+# *.json
 
 #other
 /.vscode
