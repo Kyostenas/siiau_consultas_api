@@ -160,7 +160,7 @@ def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], espacio_total: in
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
-    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='presto')
+    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='fancy_grid')
     
     return tabla
 

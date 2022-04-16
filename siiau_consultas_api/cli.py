@@ -79,7 +79,7 @@ def seleccion_modificable(texto: str, cursor: str):
 
 def titulo(texto: str, margen: int = 1):
     ancho_real = f'{" "*margen}{texto}{" "*margen}'.__len__()
-    return f'{Style.BRIGHT}{Fore.WHITE}{Back.CYAN}{" "*margen}{texto}{" "*margen}{Style.RESET_ALL}', ancho_real
+    return f'{Style.BRIGHT}{Fore.WHITE}{Back.CYAN}{" "*margen}{texto.upper()}{" "*margen}{Style.RESET_ALL}', ancho_real
 
 
 def negativo(texto: str, margen: int = 1):
@@ -130,6 +130,7 @@ USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
 MARGEN_RECUADRO_OPC = 10
 ENC_PIE = 2
+ENC_PIE_TITULO_SUBT = ENC_PIE + 5
 ENC_PIE_BORDE = ENC_PIE + 12
 MAX_TAM_COLS = 200
 MAX_TAM_FILAS = 200
@@ -139,7 +140,7 @@ ESP_EXTRA_NOTICIAS = 5
 I_CADENA_COLOR = 0
 I_TAM_CADENA_COLOR = 1  # REMINDER Se borrara obtencion de tam de texto de los colores
 ESP_BLANCO_TABLA = '\\'
-ESP_TITULO_Y_ESPS_BLANCOS = 6
+ESP_TITULO_Y_ESPS_BLANCOS = 7
 ESP_CORRECCION_COLS_TERMINAL = 1
 TRAZO = 'siiaucli'
 PUNTOS_TEXTO_CORTADO = '...'
@@ -1109,7 +1110,7 @@ def __comprobar_ult_tam_consola(cols_terminal: int,
         if limpiar_cli is False:
             limpiar_cli = True
         
-    return ult_tam_cols, ult_tam_filas, limpiar_cli
+    return ult_tam_cols_terminal, ult_tam_filas_terminal, limpiar_cli
 
 
 def __comprobar_medidas_max_consola(cols_terminal: int, filas_terminal: int):
@@ -1155,7 +1156,8 @@ def __definir_indicaciones_pantalla_informacion(cant_paginas: int):
     return indicaciones
 
 
-def __comprobar_posicion(mininmo: int, maximo: int, posicion: int):
+def __comprobar_posicion(mininmo: int, maximo: int, posicion: int, final: bool=False,
+                         limite: int = None):
     """
     Se asegura que el valor posicion no exceda el maximo ni sea menor
     al minimo; si cruzan los límites retorna el maximo o minimo según sea
@@ -1164,10 +1166,15 @@ def __comprobar_posicion(mininmo: int, maximo: int, posicion: int):
     retorna
     ------
     ```
-    minimo: int | maximo: int | posicion: int
+    minimo: int | minimo + 1 | maximo: int | posicion: int
     ```
     """
-    if posicion < mininmo:
+    if final:
+        if limite + posicion < maximo:
+            return limite + posicion
+        elif limite + posicion >= maximo:
+            return maximo
+    elif posicion < mininmo:
         return mininmo
     elif posicion > maximo:
         return maximo
@@ -1211,13 +1218,39 @@ def __calcular_rangos_pagina(cant_renglones: int,
     ```
     """
 
-    limite_comienzo_vertical = __calcular_limite_pagina(tam_vertical, cant_renglones)
-    limite_comienzo_horizontal = __calcular_limite_pagina(tam_horizontal, renglon_mas_grande)
+    limite_comienzo_vertical = __calcular_limite_pagina(
+        tam_vertical, 
+        cant_renglones
+    )
+    limite_comienzo_horizontal = __calcular_limite_pagina(
+        tam_horizontal, 
+        renglon_mas_grande
+    )
 
-    comienzo_vertical = __comprobar_posicion(0, limite_comienzo_vertical, pos_vertical)
-    comienzo_horizontal = __comprobar_posicion(0, limite_comienzo_horizontal, poas_horizontal)
-    final_vertical = __comprobar_posicion(tam_vertical, cant_renglones, pos_vertical)
-    final_horizontal = __comprobar_posicion(tam_horizontal, renglon_mas_grande, poas_horizontal)
+    comienzo_vertical = __comprobar_posicion(
+        0, 
+        limite_comienzo_vertical, 
+        pos_vertical
+    )
+    comienzo_horizontal = __comprobar_posicion(
+        0, 
+        limite_comienzo_horizontal, 
+        poas_horizontal
+    )
+    final_vertical = __comprobar_posicion(
+        0, 
+        cant_renglones, 
+        pos_vertical,
+        final=True,
+        limite=tam_vertical
+    )
+    final_horizontal = __comprobar_posicion(
+        0, 
+        renglon_mas_grande, 
+        poas_horizontal,
+        final=True,
+        limite=tam_horizontal
+    )
         
     rango_vertical = slice(comienzo_vertical, final_vertical)
     rango_horizintal = slice(comienzo_horizontal, final_horizontal)
@@ -1379,24 +1412,52 @@ def pantalla_informacion_en_paginas(titulo_pantalla: str,
         #     lambda linea: centrar_linea(linea, cols_terminal, len(linea)),
         #     pagina_truncada
         # ))
-        pagina_a_mostrar = '\n'.join(pagina_truncada)
+        en_blanco = ((filas_terminal - ENC_PIE_TITULO_SUBT) - len(pagina_truncada)) * ['']
+        pagina_a_mostrar = '\n'.join(pagina_truncada + en_blanco)
         
         titulo_subt = '\n'.join([titulo_centrado, subt_centrado])
         print(encabezados, '' , titulo_subt, pagina_a_mostrar, pie, sep='\n')
         
+        # print('ultam_cols_term: ', ultam_cols_term, '             ')
+        # print('ultam_fls_term: ', ultam_fls_term, '             ')
+        # print('num_pag_selec: ', num_pag_selec, '             ')
+        # print('posicion_hori: ', posicion_hori, '             ')
+        # print('posicion_vert: ', posicion_vert, '             ')
+        # print('factor_avanze: ', factor_avanze, '             ')
+        # print('rango_vertical: ', repr(rango_vertical), '             ')
+        # print('rango_horizontal: ', repr(rango_horizontal), '             ')
+        # print('max_tam_vertical: ', max_tam_vertical, '             ')
+        # print('max_tam_horizontal: ', max_tam_horizontal, '             ')
+        # print(
+        #     'comparador aumento posicion_hori: ', 
+        #     renglon_mas_grande_pag - max_tam_horizontal, 
+        #     '             '
+        # )
+        # print(
+        #     'comparador aumento posicion_vert: ',
+        #     cant_renglones - max_tam_vertical,
+        #     '             '
+        # )
+        
         tecla = __leer_tecla()
         if tecla == TECLAS.com_ctrl_flecha_iz:
-            pagina -= 1
+            if num_pag_selec > 0:
+                num_pag_selec -= 1
         elif tecla == TECLAS.com_ctrl_flecha_de:
-            pagina += 1
+            if num_pag_selec < len(paginas):
+                num_pag_selec += 1
         if tecla == TECLAS.tec_flecha_iz:
-            posicion_hori -= 1
+            if posicion_hori > 0:
+                posicion_hori -= 1
         elif tecla == TECLAS.tec_flecha_de:
-            posicion_hori += 1
+            if posicion_hori < renglon_mas_grande_pag - max_tam_horizontal:
+                posicion_hori += 1
         elif tecla == TECLAS.tec_flecha_ar:
-            posicion_vert -= 1
+            if posicion_vert > 0:
+                posicion_vert -= 1
         elif tecla == TECLAS.tec_flecha_ab:
-            posicion_vert += 1
+            if posicion_vert < cant_renglones - max_tam_vertical:
+                posicion_vert += 1
         elif tecla == TECLAS.com_ctrl_c:
             exit(despedida())
         elif tecla == TECLAS.tec_retroceso:

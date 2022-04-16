@@ -19,7 +19,7 @@ from .utiles import barra_progreso, tam_consola
 from .servicio_tabla import tabla_dos_columnas_valores
 from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
 from .getch import getch
-from .servicio_consulta_siiau import oferta_academica, Siiau, centros, carreras, materias
+from .servicio_consulta_siiau import oferta_academica, Siiau, centros, carreras, clases
 from .servicio_oferta_siiau import estructurar_oferta_como_horario
 from .cli import menu_generico_seleccion as menu_gen, sub_titulo
 from .cli import pantalla_agregado_centrada as pantalla_para_agregar
@@ -46,13 +46,13 @@ MNU_OFERTA = 'MNU_OFERTA'
 MNU_CENTROS = 'MNU_CENTROS' 
 
 # NOMBRES AGREGADOS
-AGR_MATERIAS = 'AGR_MATERIAS'
+AGR_CLASES = 'AGR_CLASES'
 AGR_NRCS_EXCLUSICOS = 'AGR_NRCS_EXCLUSICOS'
 
 # MENUS SELECCION (SEL -> SELECCION)
 MNU_SEL_CENTROS = 'MNU_SEL_CENTROS'
 MNU_SEL_CARRERAS = 'MNU_SEL_CARRERAS'
-MNU_SEL_MATERIAS = 'MNU_SEL_MATERIAS'
+MNU_SEL_CLASES = 'MNU_SEL_CLASES'
 # (o-------------------------------------o-------------------------------------o)
 
 
@@ -91,14 +91,14 @@ def __agregar_nrcs_exclusivos(transferencia_memoria, memoria_total):
     if transferencia_memoria is None:
         transferencia_memoria = {}
     try:
-        transf_mat_agregadas = memoria_total[MNU_OFERTA][AGR_MATERIAS]
+        transf_mat_agregadas = memoria_total[MNU_OFERTA][AGR_CLASES]
     except KeyError:
         pantalla_de_mensajes(
             errores=[
-                'No hay materias registradas aun'
+                'No hay clases registradas aun'
             ],
             ayudas=[
-                'Primero registra una materia en "agregar materias para consultar"'
+                'Primero registra una materia en "agregar clases para consultar"'
             ]
         )
         return transferencia_memoria
@@ -107,11 +107,11 @@ def __agregar_nrcs_exclusivos(transferencia_memoria, memoria_total):
     ), transf_mat_agregadas))
     
     
-def __agregar_materias_para_consultar(transferencia_memoria, memoria_total):
+def __agregar_clases_para_consultar(transferencia_memoria, memoria_total):
     if transferencia_memoria is None:
         transferencia_memoria = []
     transferencia_memoria = pantalla_para_agregar(
-        7, 15, 'agregar materias', 'clave', transferencia_memoria
+        7, 15, 'agregar clases', 'clave', transferencia_memoria
     )
     
     return transferencia_memoria
@@ -123,9 +123,9 @@ def __menu_consultar_oferta(transferencia_memoria, memoria_total):
     titulo_menu = 'consultar oferta'
     sub_titulo_menu = 'consulta y procesa la oferta academica'
     opciones = [
-        Opcion('agregar materias para consultar', __agregar_materias_para_consultar, AGR_MATERIAS),
+        Opcion('agregar clases para consultar', __agregar_clases_para_consultar, AGR_CLASES),
         Opcion('agregar nrcs exclusivos', __agregar_nrcs_exclusivos, AGR_NRCS_EXCLUSICOS),
-        Opcion('ver materias agregadas', str, ''),
+        Opcion('ver clases agregadas', str, ''),
         Opcion('ver clases', str, ''),
         Opcion('generar posibles horarios', str, ''),
     ]
@@ -208,12 +208,12 @@ def __menu_carreras(centro: CentroCompleto) -> CarreraCompleta:
     return carrera
 
 
-def __menu_materias(materia: CarreraCompleta) -> ClaseCompleta:
-    titulo = f'materias de {materia.nombre_completo} ({materia.ref_carrera})'
-    titulo_barra = f'descargando y procesando datos'
+def __menu_clases(carrera: CarreraCompleta) -> ClaseCompleta:
+    titulo = f'clases de {carrera.nombre_completo} ({carrera.ref_carrera})'
+    titulo_barra = f'descargando y procesando clases de {carrera.ref_carrera}'
     opciones = []
-    materias_carrera = materias(materia.ref_carrera)
-    for progreso, total, obtenidas, ref_elemento, els_comp, els_totales in materias_carrera:
+    clases_carrera = clases(carrera.ref_carrera)
+    for progreso, total, obtenidas, ref_elemento, els_comp, els_totales in clases_carrera:
         if obtenidas == None:
             pantalla_carga(
                 total, 
@@ -233,7 +233,7 @@ def __menu_materias(materia: CarreraCompleta) -> ClaseCompleta:
                     titulo_materia = una_materia.titulo[:15] + "..."
                 nombre_materia = f'{una_materia.clave} {titulo_materia}'
                 def retornar_materia(materia=una_materia): return materia
-                nueva_opcion = Opcion(nombre_materia, retornar_materia, MNU_SEL_MATERIAS)
+                nueva_opcion = Opcion(nombre_materia, retornar_materia, MNU_SEL_CLASES)
                 opciones.append(nueva_opcion)
     memoria_total = {}
     retorno = menu_gen(
@@ -245,11 +245,11 @@ def __menu_materias(materia: CarreraCompleta) -> ClaseCompleta:
         cuadricula=True
     )
     try:
-        materia = retorno[MNU_SEL_MATERIAS]
+        clase = retorno[MNU_SEL_CLASES]
     except KeyError:
-        materia = None
+        clase = None
     
-    return materia
+    return clase
 
 
 def __consultar_centros(transferencia_memoria, memoria_total):
@@ -260,16 +260,16 @@ def __consultar_centros(transferencia_memoria, memoria_total):
 
     centro = __menu_centros()
     carrera = None
-    materia = None
+    clase = None
     if centro != None:
         carrera = __menu_carreras(centro)
     if carrera != None:
-        materia = __menu_materias(carrera)
-    if materia != None:
-        tabla_materia = tabla_dos_columnas_valores(materia, cols_terminal)
+        clase = __menu_clases(carrera)
+    if clase != None:
+        tabla_materia = tabla_dos_columnas_valores(clase, cols_terminal)
         pantalla_informacion_en_paginas(
             titulo_pantalla='INFORMACION DE MATERIA',
-            paginas=[(materia.clave, tabla_materia)]
+            paginas=[(clase.clave, tabla_materia)]
         )
         
     return transferencia_memoria 
@@ -290,11 +290,16 @@ def menu_principal():
         Opcion('consultar mi horario actual', str, ''),
         Opcion('consultar mis carreras', str, ''),
         Opcion('consultar mis horarios generados', str, ''),
-        Opcion('registrar materias', str, ''),
+        Opcion('registrar clases', str, ''),
     ]
     
     memoria_total = {}
-    retorno_final = menu_gen(opciones, True, titulo_menu=titulo_menu, memoria_total=memoria_total)
+    retorno_final = menu_gen(
+        opciones, 
+        True, 
+        titulo_menu=titulo_menu, 
+        memoria_total=memoria_total
+    )
     
     # exit(print(retorno_final, '\n', memoria_total))
 

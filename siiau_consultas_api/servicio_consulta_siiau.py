@@ -41,18 +41,18 @@ I_NOM_CENTRO = 1
 I_REF_CICLO = 0
 I_NOM_CICLO = 1
 ANCHO_TABLA_CARRERAS = 2
-INICIO_TABLA_MATERIAS = 1  # En el 0 está el nombre de la carrera
-RANGO_SUBCLAVE_MATERIAS = slice(0, 2)
-TITULO_MATERIA_COMPLETA = 0
-I_CICLO_INICIO_MATERIA = 8
-I_AREA_MATERIA = 0
+INICIO_TABLA_CLASES = 1  # En el 0 está el nombre de la carrera
+RANGO_SUBCLAVE_CLASES = slice(0, 2)
+TITULO_CLASE_COMPLETA = 0
+I_CICLO_INICIO_CLASE = 8
+I_AREA_CLASE = 0
 RANGO_DEPS_CARRS_CENTROS = slice(13, 16)
 ANCHO_TABLA_HORARIO = 17
 ESP_FAL_SUB_CLASE = 4
 I_REF_CARRERA_ESTUDIANTE = 0  # Esta es en las carreras registradas del estudiante
 RANGO_CICLO_IN_CARR_ES = slice(1, 3)
-I_HORARIO_MATERIA_OFERTA = 8
-I_PROFESORES_MATERIA_OFERTA = 7
+I_HORARIO_CLASE_OFERTA = 8
+I_PROFESORES_CLASE_OFERTA = 7
 ANCHO_TABLA_PROFES_OFERTA = 2
 I_DIAS_HORARIOS_OFERTA = 2
 RANGO_DIAS_HORARIO_COLUMNAS = slice(6, 12)
@@ -215,13 +215,13 @@ def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
     return carreras_formateadas
 
 
-def oferta_academica(centro, ciclo, materia, con_cupos=False):
+def oferta_academica(centro, ciclo, clase, con_cupos=False):
     url_oferta = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/sspseca.consulta_oferta'])
     payload = dict(ciclop=ciclo,
                    cup=centro,
                    majrp='',
-                   crsep=materia,
-                   materiap='',
+                   crsep=clase,
+                   clasep='',
                    horaip='',
                    horafp='',
                    edifp='',
@@ -233,25 +233,25 @@ def oferta_academica(centro, ciclo, materia, con_cupos=False):
                    data=payload)
     tabla_oferta_html = WebSp(resp.content, 'html.parser')
 
-    materias_crudas = tabla_oferta_html.select('td.tddatos')
-    materias_limpias = list(map(lambda x: limpiar_html(x).replace(RETORNO*2, RETORNO).splitlines(keepends=False), materias_crudas))
-    for i_trozo in range(len(materias_limpias)):
-        while '' in materias_limpias[i_trozo]:
-            materias_limpias[i_trozo].remove('')
+    clases_crudas = tabla_oferta_html.select('td.tddatos')
+    clases_limpias = list(map(lambda x: limpiar_html(x).replace(RETORNO*2, RETORNO).splitlines(keepends=False), clases_crudas))
+    for i_trozo in range(len(clases_limpias)):
+        while '' in clases_limpias[i_trozo]:
+            clases_limpias[i_trozo].remove('')
 
-    # cuenta las columnas con más de 1 elemento, pues en las materias solo hay 1 por fila (profesores)
-    conteo_filas = sum(list(map(lambda columna: 1 if len(columna) > 1 else 0, materias_limpias)))
+    # cuenta las columnas con más de 1 elemento, pues en las clases solo hay 1 por fila (profesores)
+    conteo_filas = sum(list(map(lambda columna: 1 if len(columna) > 1 else 0, clases_limpias)))
 
-    tam_filas = int(len(materias_limpias) / conteo_filas)
-    materias_particionadas = particionar(materias_limpias, tam_filas, retornar_tuplas=False)
-    for i_fila, fila in enumerate(materias_particionadas):
-        puros_profes = materias_particionadas[i_fila].pop(I_PROFESORES_MATERIA_OFERTA)
+    tam_filas = int(len(clases_limpias) / conteo_filas)
+    clases_particionadas = particionar(clases_limpias, tam_filas, retornar_tuplas=False)
+    for i_fila, fila in enumerate(clases_particionadas):
+        puros_profes = clases_particionadas[i_fila].pop(I_PROFESORES_CLASE_OFERTA)
         profes_particionados = particionar(puros_profes, ANCHO_TABLA_PROFES_OFERTA)
         nueva_lista_profes = []
         for profe in profes_particionados:
             nueva_lista_profes.append(ProfesorOferta(*profe))
-        materias_particionadas[i_fila] = aplanar_lista(fila)
-        materias_particionadas[i_fila].insert(I_PROFESORES_MATERIA_OFERTA, tuple(nueva_lista_profes))
+        clases_particionadas[i_fila] = aplanar_lista(fila)
+        clases_particionadas[i_fila].insert(I_PROFESORES_CLASE_OFERTA, tuple(nueva_lista_profes))
 
     horarios_crudos = tabla_oferta_html.select('table.td1')
     horarios_limpios = []
@@ -281,12 +281,12 @@ def oferta_academica(centro, ciclo, materia, con_cupos=False):
             horarios_limpios[i_fila][i_sub_fila][I_DIAS_HORARIOS_OFERTA] = DiasHorarioOferta(*nuevos_dias)
             horarios_limpios[i_fila][i_sub_fila] = HorarioOferta(*sub_fila)
 
-    for i_fila, fila in enumerate(materias_particionadas):
+    for i_fila, fila in enumerate(clases_particionadas):
         horarios_correspondientes = tuple(horarios_limpios[i_fila])
-        materias_particionadas[i_fila].insert(I_HORARIO_MATERIA_OFERTA, horarios_correspondientes)
-        materias_particionadas[i_fila] = ClaseOferta(*fila)
+        clases_particionadas[i_fila].insert(I_HORARIO_CLASE_OFERTA, horarios_correspondientes)
+        clases_particionadas[i_fila] = ClaseOferta(*fila)
 
-    return tuple(materias_particionadas)
+    return tuple(clases_particionadas)
 
 
 def ciclos() -> Tuple[CicloCompleto]:
@@ -365,83 +365,83 @@ def carreras(centro_cup_id: str) -> Tuple[CarreraCompleta]:
     return carreras_procesadas
 
 
-def __obtener_materia_completa(area, clave_materia, ciclo_inicio=''):
-    url_materia_completa = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.detmate'])
+def __obtener_clase_completa(area, clave_clase, ciclo_inicio=''):
+    url_clase_completa = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.detmate'])
     yield 1, 11, None, None
-    subclave = ','.join([area, clave_materia, ciclo_inicio])
+    subclave = ','.join([area, clave_clase, ciclo_inicio])
     yield 2, 11, None, None
     payload = dict(subclavep=subclave,
                    pEntra='OAP')  # TODO Encontrar qué es esto
     yield 3, 11, None, None
-    url_materia_completa = __join_payload_url(url_materia_completa, payload)
+    url_clase_completa = __join_payload_url(url_clase_completa, payload)
     resp = request('GET',
-                   url=url_materia_completa,
+                   url=url_clase_completa,
                    data=payload)
     yield 4, 11, None, None
-    tabla_materia_completa = __websp_findall(resp, name='td')
+    tabla_clase_completa = __websp_findall(resp, name='td')
     yield 5, 11, None, None
     encabezados = __websp_findall(resp, name='th')
     yield 6, 11, None, None
     encabezados = list(map(limpiar_html, encabezados))
     yield 7, 11, None, None
-    titulo = encabezados.pop(TITULO_MATERIA_COMPLETA)
+    titulo = encabezados.pop(TITULO_CLASE_COMPLETA)
     yield 8, 11, None, None
-    tabla_materia_completa = list(map(limpiar_html, tabla_materia_completa))[:len(encabezados)]
+    tabla_clase_completa = list(map(limpiar_html, tabla_clase_completa))[:len(encabezados)]
     yield 9, 11, None, None
 
-    if tabla_materia_completa[I_AREA_MATERIA] == '':
-        ciclo_inicio = tabla_materia_completa[I_CICLO_INICIO_MATERIA]
-        progreso = __obtener_materia_completa(area, clave_materia, ciclo_inicio)
+    if tabla_clase_completa[I_AREA_CLASE] == '':
+        ciclo_inicio = tabla_clase_completa[I_CICLO_INICIO_CLASE]
+        progreso = __obtener_clase_completa(area, clave_clase, ciclo_inicio)
         for paso, total, _, tabla in progreso:
             if tabla != None:
-                tabla_materia_completa = tabla
+                tabla_clase_completa = tabla
     else:
-        tabla_materia_completa.insert(TITULO_MATERIA_COMPLETA, titulo)
+        tabla_clase_completa.insert(TITULO_CLASE_COMPLETA, titulo)
     yield 10, 11, None, None
-    yield 11, 11, ClaseCompleta(*tabla_materia_completa), tabla_materia_completa
+    yield 11, 11, ClaseCompleta(*tabla_clase_completa), tabla_clase_completa
 
 
 
-def materias(id_carrera: str):
-    url_catalogo_materias = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.cataxcarr'])
+def clases(id_carrera: str):
+    url_catalogo_clases = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.cataxcarr'])
     payload = dict(carrerap=id_carrera,
                    ordenp=1,
                    mostrarp=5,
                    tipop='T')
-    url_catalogo_materias = __join_payload_url(url_catalogo_materias, payload)
+    url_catalogo_clases = __join_payload_url(url_catalogo_clases, payload)
     resp = request('GET',
-                   url=url_catalogo_materias,
+                   url=url_catalogo_clases,
                    data=payload)
-    tabla_materias = __websp_findall(resp, name='td')
+    tabla_clases = __websp_findall(resp, name='td')
     encabezados = __websp_findall(resp, name='th')
-    tabla_materias = list(map(limpiar_html, tabla_materias))[INICIO_TABLA_MATERIAS:]
-    encabezados = list(map(limpiar_html, encabezados))[INICIO_TABLA_MATERIAS:]
+    tabla_clases = list(map(limpiar_html, tabla_clases))[INICIO_TABLA_CLASES:]
+    encabezados = list(map(limpiar_html, encabezados))[INICIO_TABLA_CLASES:]
     ancho_tabla = len(encabezados)
-    tabla_materias = particionar(tabla_materias, ancho_tabla)
+    tabla_clases = particionar(tabla_clases, ancho_tabla)
 
-    materias_completas = []
+    clases_completas = []
     prog_compl = 0
     mat_compl = 0
-    nones = [1 for renglon_materia in tabla_materias if None in renglon_materia]
+    nones = [1 for renglon_clase in tabla_clases if None in renglon_clase]
     nones = sum(nones)
-    materias_total = (len(tabla_materias) - nones)
-    progreso_total = materias_total + (11 * materias_total)
-    for renglon_materia in tabla_materias:
-        if None not in renglon_materia:  # Ultimo renglón tiene "(c) 2002 Universidad de Guadalajara ..."
-            progreso = __obtener_materia_completa(*renglon_materia[RANGO_SUBCLAVE_MATERIAS])
-            for paso, total_mat_com, materia_obtenida, _ in progreso:
-                ref_elemento_materia = None
-                if materia_obtenida != None:
-                    materia_completa = materia_obtenida
-                    ref_elemento_materia =  f'{materia_completa.clave} {materia_completa.titulo}'
+    clases_total = (len(tabla_clases) - nones)
+    progreso_total = clases_total + (11 * clases_total)
+    for renglon_clase in tabla_clases:
+        if None not in renglon_clase:  # Ultimo renglón tiene "(c) 2002 Universidad de Guadalajara ..."
+            progreso = __obtener_clase_completa(*renglon_clase[RANGO_SUBCLAVE_CLASES])
+            for paso, total_mat_com, clase_obtenida, _ in progreso:
+                ref_elemento_clase = None
+                if clase_obtenida != None:
+                    clase_completa = clase_obtenida
+                    ref_elemento_clase =  f'{clase_completa.clave} {clase_completa.titulo}'
                 prog_compl += 1
-                yield prog_compl, progreso_total, None, ref_elemento_materia, mat_compl, materias_total
-            materias_completas.append(materia_completa)
+                yield prog_compl, progreso_total, None, ref_elemento_clase, mat_compl, clases_total
+            clases_completas.append(clase_completa)
             prog_compl += 1
             mat_compl += 1
-            yield prog_compl, progreso_total, None, None, mat_compl, materias_total
+            yield prog_compl, progreso_total, None, None, mat_compl, clases_total
     else:
-        yield prog_compl, progreso_total, tuple(materias_completas), None, mat_compl, materias_total
+        yield prog_compl, progreso_total, tuple(clases_completas), None, mat_compl, clases_total
 
 
 def __obtener_cookies(resp_inicio) -> str:
@@ -495,10 +495,10 @@ class Siiau:
         cookies, pidm_p, _, __ = self.sesion
         return carrera_s_estudiante(pidm_p, cookies)
 
-    def oferta(self, centro='', ciclo='', materia='', con_cupos=False) -> Tuple[ClaseOferta]:
+    def oferta(self, centro='', ciclo='', clase='', con_cupos=False) -> Tuple[ClaseOferta]:
         if ciclo == '':
             ciclo = self.sesion.ciclo
-        return oferta_academica(centro, ciclo, materia, con_cupos)
+        return oferta_academica(centro, ciclo, clase, con_cupos)
 
 
 if __name__ == '__main__':
