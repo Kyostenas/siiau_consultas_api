@@ -24,7 +24,7 @@ para suplirla.
 """
 
 import re, io, json, xlwt, os
-from typing import Tuple
+from typing import NamedTuple, Tuple
 from xlwt import Workbook
 import datetime
 
@@ -281,3 +281,21 @@ def barra_progreso(total, progreso, imprimir=False, mensaje='cargando'):
         print_actualizable(barra_prog)
     else:
         return barra_prog
+    
+
+def convertir_a_dict_recursivamente(objeto):
+    """
+    Convierte un objeto en un diccionario, recursivamente.
+    """
+    if isinstance(objeto, dict):
+        return {k: convertir_a_dict_recursivamente(v) for k, v in objeto.items()}
+    if isinstance(objeto, list):
+        return [convertir_a_dict_recursivamente(v) for v in objeto]
+    if isinstance(objeto, tuple):
+        # Si es tupla, probablemente es "NamedTuple"
+        try:
+            return objeto._asdict()
+        except AttributeError:
+            return tuple([convertir_a_dict_recursivamente(v) for v in objeto])
+    else:
+        return objeto

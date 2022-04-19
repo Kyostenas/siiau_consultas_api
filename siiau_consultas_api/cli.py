@@ -64,17 +64,24 @@ def ayuda(texto: str, msj: str = 'AYUD'):
 
 
 def seleccion(texto: str, cursor: str):
-    ancho_real = f'{cursor} {texto}'.__len__()
-    pre, _ = sub_titulo(cursor)
-    seleccionado = f'{Style.BRIGHT}{Fore.BLUE}{texto}{Style.RESET_ALL}'
-    return f'{pre} {seleccionado}', ancho_real
+    # ancho_real = f'{cursor} {texto}'.__len__()
+    ancho_real = f'{texto}'.__len__()
+    # pre, _ = sub_titulo(cursor)
+    seleccionado = f'{Style.BRIGHT}{Back.WHITE}{Fore.BLACK}{texto}{Style.RESET_ALL}'
+    return f'{seleccionado}', ancho_real
+    # return f'{pre} {seleccionado}', ancho_real
 
 
 def seleccion_modificable(texto: str, cursor: str):
-    ancho_real = f'{cursor} {texto}{CARET}'.__len__()
-    pre, _ = sub_titulo(cursor)
-    seleccionado = f'{Style.BRIGHT}{Fore.BLUE}{texto}{Style.RESET_ALL}{CARET}'
-    return f'{pre} {seleccionado}', ancho_real
+    # ancho_real = f'{cursor} {texto}{CARET}'.__len__()
+    ancho_real = f'{texto}'.__len__()
+    # pre, _ = sub_titulo(cursor)
+    caret = f'{Style.BRIGHT}{Fore.CYAN}{CARET}{Style.RESET_ALL}'
+    seleccionado = (
+        f'{Style.BRIGHT}{Back.WHITE}{Fore.BLACK}{texto}{Style.RESET_ALL}{caret}'
+    )
+    return f'{seleccionado}', ancho_real
+    # return f'{pre} {seleccionado}', ancho_real
 
 
 def titulo(texto: str, margen: int = 1):
@@ -124,7 +131,7 @@ CURSOR = '>'
 CARET = '│'
 ESC_CODE = '\x1b'
 DELIMITADOR_RECUADRO = '|'
-EXTRA_ESP_CURSOR = len(CURSOR) + 1
+EXTRA_ESP_CURSOR = 0
 EXTRA_ESP_CARET = len(CARET)
 USUARIO_DEFECTO  = 'Usuario Desconocido'
 PROGRAMA, LEN_PROG = sub_titulo('SIIAU Consulta')
@@ -236,33 +243,58 @@ def __formatear_una_opcion(opcion_texto: str, max_len: int,
                            i_seleccion: int, i_opcion: int,
                            cols_terminal) -> str:
     esta_seleccionado = i_seleccion == i_opcion
-    if esta_seleccionado:
-        opcion_formateada, len_opcion = seleccion(opcion_texto, CURSOR)
-    else:
-        opcion_formateada = opcion_texto
-        len_opcion = len(opcion_formateada)
     nuevo_max_len = max_len + EXTRA_ESP_CURSOR
-
-    a_izquierda = alinear_linea_izquierda(opcion_formateada, 
-                                          nuevo_max_len, 
-                                          len_opcion)
-    linea_recuadro_opciones = centrar_linea(a_izquierda, 
-                                            nuevo_max_len + MARGEN_RECUADRO_OPC, 
-                                            nuevo_max_len)
-    linea_recuadro_opciones = ''.join([DELIMITADOR_RECUADRO, 
-                                       linea_recuadro_opciones, 
-                                       DELIMITADOR_RECUADRO])
-    len_linea_recuadro = len(DELIMITADOR_RECUADRO) * 2 + nuevo_max_len + MARGEN_RECUADRO_OPC
-    linea_recuadro_centrada = centrar_linea(linea_recuadro_opciones, 
-                                            cols_terminal, 
-                                            len_linea_recuadro, 
-                                            ' ')
+    len_opcion = len(opcion_texto)
+    if esta_seleccionado:
+        a_izquierda = alinear_linea_izquierda(
+            opcion_texto, 
+            nuevo_max_len, 
+            len_opcion
+        )
+        linea_recuadro_opciones = centrar_linea(
+            a_izquierda, 
+            nuevo_max_len + MARGEN_RECUADRO_OPC, 
+            nuevo_max_len
+        )
+        linea_recuadro_opciones, len_opcion = seleccion(
+            linea_recuadro_opciones, 
+            CURSOR
+        )
+    else:
+        a_izquierda = alinear_linea_izquierda(
+            opcion_texto, 
+            nuevo_max_len, 
+            len_opcion
+        )
+        linea_recuadro_opciones = centrar_linea(
+            a_izquierda, 
+            nuevo_max_len + MARGEN_RECUADRO_OPC, 
+            nuevo_max_len
+        )
+        
+    linea_recuadro_opciones = ''.join([
+        DELIMITADOR_RECUADRO, 
+        linea_recuadro_opciones, 
+        DELIMITADOR_RECUADRO
+    ])
+    len_linea_recuadro = (
+        len(DELIMITADOR_RECUADRO) * 2 + nuevo_max_len + MARGEN_RECUADRO_OPC
+    )
+    linea_recuadro_centrada = centrar_linea(
+        linea_recuadro_opciones, 
+        cols_terminal, 
+        len_linea_recuadro, 
+    )
 
     return linea_recuadro_centrada
 
 
-def __formatear_opciones(opciones: Tuple[Opcion], i_seleccion: int, cols_terminal) -> List[str]:
-    max_len_opciones_crudas = max(list(map(lambda opc: len(opc.mensaje), opciones)))
+def __formatear_opciones(opciones: Tuple[Opcion], i_seleccion: int, 
+                         cols_terminal) -> List[str]:
+    max_len_opciones_crudas = max(list(map(
+        lambda opc: len(opc.mensaje), 
+        opciones
+    )))
     opciones_con_formato = []
     for i_opcion, opcion_a_formatear in enumerate(opciones):
         opcion_a_formatear: Opcion
@@ -374,18 +406,18 @@ def __leer_tecla(retornar_original = False):
 # FIX cuando pagina sin ser cuadricula, no se puede cambiar página (¿Por qué?)
 def menu_generico_seleccion(opciones: Tuple[Opcion], 
                             principal: bool,
-                            memoria_total: dict,
+                            # memoria_total: dict,
                             titulo_menu: str = 'MENU',
                             subtitulo_menu: str = None, 
-                            transferencia_memoria: dict = None,
+                            # transferencia_memoria: dict = None,
                             regresar_en_seleccion: bool = False,
                             cuadricula: bool = False):
     
     # Se revisa si hay transferencia de retorno de funciones anteriores enlazadas    
-    if transferencia_memoria != None:
-        cache_ejecuciones_temporal = transferencia_memoria
-    else:
-        cache_ejecuciones_temporal = {}
+    # if transferencia_memoria != None:
+    #     cache_ejecuciones_temporal = transferencia_memoria
+    # else:
+    #     cache_ejecuciones_temporal = {}
         
     i_fila_seleccion = 0
     i_col_seleccion = 0
@@ -641,39 +673,37 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             else:
                 funcion_obtenida = opciones[i_fila_seleccion].funcion  # Se obtiene la funcion.
                 nombre_transferencia = opciones[i_fila_seleccion].nombretransf  # Se obtiene el nombre como cadena.
-            try:
+            # try:
                 # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
                 # la transferencia (resultados anteriores de otras ejecuciones).
-                try:
-                    retorno_funcion = funcion_obtenida(
-                        transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
-                        memoria_total=memoria_total
-                    )
-                except KeyError:
+                # try:
+                #     retorno_funcion = funcion_obtenida()
+                # except KeyError:
                     # Si aun no se ha ejecutado nada, no habra un resultado de ejecucion
                     # y no existira la llave de dicho resultado. Cuando eso pasa, se crea la
                     # llave requerida y se manda con None.
-                    cache_ejecuciones_temporal[nombre_transferencia] = None
-                    retorno_funcion = funcion_obtenida(
-                        transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
-                        memoria_total=memoria_total
-                    )
-            except TypeError:
+                # retorno_funcion = funcion_obtenida(
+                #     transferencia_memoria=cache_ejecuciones_temporal[nombre_transferencia],
+                #     memoria_total=memoria_total
+                # )
+            # except TypeError:
                 # Se ejecuta la funcion guardada en esa opcion.
-                retorno_funcion = funcion_obtenida()  
+            retorno_funcion = funcion_obtenida()
+            __limpar_cli()
+            
 
             # Se guarda el resultado de la funcion en un diccionario.
-            cache_ejecuciones_temporal[nombre_transferencia] = retorno_funcion
-            __limpar_cli()
+            # cache_ejecuciones_temporal[nombre_transferencia] = retorno_funcion
             if regresar_en_seleccion:
-                return cache_ejecuciones_temporal
+                return retorno_funcion
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
             if principal:  # Si es principal, y se aprieta salir, cierra el programa.
                 print('Hasta luego')
-                return cache_ejecuciones_temporal
+                return
             else:  # Si no es principal, se sale del menu
-                return cache_ejecuciones_temporal
+                # return cache_ejecuciones_temporal
+                return None
 
         regresar_cursor_inicio_pantalla()
         
@@ -760,11 +790,8 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                lim_cant_agregados: int,
                                mensaje = 'agregar elementos',
                                nombre_elemento = 'elemento',
-                               transferencia_memoria: Union[list, tuple] = None):
-    if transferencia_memoria != None:
-        agregado = transferencia_memoria
-    else:
-        agregado = []
+                               transferencia: list = None,):
+    agregado = [] if transferencia is None else transferencia
     i_fila_seleccion = 0
     i_col_seleccion = 0
     ultimo_tam_cols, ultimo_tam_filas = tam_consola()
