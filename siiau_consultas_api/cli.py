@@ -433,7 +433,12 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
     if ultimo_tam_filas_terminal > MAX_TAM_FILAS:
             ultimo_tam_filas_terminal = MAX_TAM_FILAS
             
-    tam_opcion_mas_grande = max(list(map(lambda opcion: len(opcion.mensaje), opciones)))
+    tam_opcion_mas_grande = max(list(map(
+        lambda opcion: len(opcion.mensaje), 
+        opciones
+    )))
+    
+    varios_retornos = []
 
     __limpar_cli()
     while True:
@@ -668,11 +673,21 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 pagina += 1
         elif tecla == Teclas().tec_enter:
             if cuadricula:
-                funcion_obtenida = malla_funciones[i_fila_seleccion][i_col_seleccion].funcion  # Se obtiene la funcion.
-                nombre_transferencia = malla_funciones[i_fila_seleccion][i_col_seleccion].nombretransf  # Se obtiene el nombre como cadena.
+                # Se obtiene la funcion.
+                funcion_obtenida = (
+                    malla_funciones[i_fila_seleccion][i_col_seleccion].funcion
+                )
+                # Se obtiene los argumentos.
+                argumentos_obtenidos = (
+                    malla_funciones[i_fila_seleccion][i_col_seleccion].argumentos
+                ) 
+                # nombre_transferencia = malla_funciones[i_fila_seleccion][i_col_seleccion].nombretransf  # Se obtiene el nombre como cadena.
             else:
-                funcion_obtenida = opciones[i_fila_seleccion].funcion  # Se obtiene la funcion.
-                nombre_transferencia = opciones[i_fila_seleccion].nombretransf  # Se obtiene el nombre como cadena.
+                # Se obtiene la funcion.
+                funcion_obtenida = opciones[i_fila_seleccion].funcion 
+                # Se obtiene los argumentos.
+                argumentos_obtenidos = opciones[i_fila_seleccion].argumentos
+                # nombre_transferencia = opciones[i_fila_seleccion].nombretransf  # Se obtiene el nombre como cadena.
             # try:
                 # Se ejecuta la funcion guardada en esa opcion y se intenta enviar
                 # la transferencia (resultados anteriores de otras ejecuciones).
@@ -688,7 +703,10 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
                 # )
             # except TypeError:
                 # Se ejecuta la funcion guardada en esa opcion.
-            retorno_funcion = funcion_obtenida()
+            if argumentos_obtenidos is not None:
+                retorno_funcion = funcion_obtenida(*argumentos_obtenidos)
+            else:
+                retorno_funcion = funcion_obtenida()
             __limpar_cli()
             
 
@@ -696,14 +714,18 @@ def menu_generico_seleccion(opciones: Tuple[Opcion],
             # cache_ejecuciones_temporal[nombre_transferencia] = retorno_funcion
             if regresar_en_seleccion:
                 return retorno_funcion
+            else:
+                if retorno_funcion not in varios_retornos:
+                    varios_retornos.append(retorno_funcion)
         elif tecla == Teclas().tec_retroceso or tecla == Teclas().com_ctrl_c:
             __limpar_cli()
-            if principal:  # Si es principal, y se aprieta salir, cierra el programa.
+            if principal:
+                # Si es principal, y se aprieta salir, cierra el programa.
                 print('Hasta luego')
                 return
-            else:  # Si no es principal, se sale del menu
-                # return cache_ejecuciones_temporal
-                return None
+            else:  
+                # Si no es principal, se sale del menu y regresa los retornos acumulados.
+                return varios_retornos
 
         regresar_cursor_inicio_pantalla()
         
@@ -790,7 +812,9 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                                lim_cant_agregados: int,
                                mensaje = 'agregar elementos',
                                nombre_elemento = 'elemento',
-                               transferencia: list = None,):
+                               transferencia: list = None,
+                               numerico: bool = False,
+                               ref_transferencia: str = None,):
     agregado = [] if transferencia is None else transferencia
     i_fila_seleccion = 0
     i_col_seleccion = 0
@@ -824,7 +848,9 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         
         # Se calcula el tam. de cada fila para la representacion
         # grafica.
-        agregado_modificable = list(agregado)
+        agregado_modificable = list(map(
+            lambda string: f'{string}'.upper(), agregado
+        ))
         tams_filas = sqrt(len(agregado_modificable))
         if tams_filas < int(tams_filas):
             tams_filas = int(tams_filas) + 1
@@ -966,7 +992,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
         
         """ En esta parte se espera una tecla y se hace algo con el resultado """
         tecla = __leer_tecla()
-        if tecla == Teclas().tec_flecha_ar:
+        if tecla == TECLAS.tec_flecha_ar:
             # Esto hace que la seleccion queda centrada si esta seleccionada una
             # fila con un elemento, y se mueve el cursor hacia una fila de mas de
             # dos elementos. Lo logico seria que el cursor siguiera en el centro
@@ -984,7 +1010,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # hacia la fila de arriba (si es que existe).
             i_fila_seleccion -= 1
             
-        elif tecla == Teclas().tec_flecha_ab:
+        elif tecla == TECLAS.tec_flecha_ab:
             # Del mismo modo que en la opcion de flecha arriba, si el cursor esta 
             # en una fila de menor tam. que la de arriba y se mueve hacia abajo
             # (siendo esta fila la ultima de abajo), el cursor regresa a la primera
@@ -1002,12 +1028,12 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             # hacia la fila de abajo (si es que existe).
             i_fila_seleccion += 1
             
-        elif tecla == Teclas().tec_flecha_de:
+        elif tecla == TECLAS.tec_flecha_de:
             i_col_seleccion += 1
-        elif tecla == Teclas().tec_flecha_iz:
+        elif tecla == TECLAS.tec_flecha_iz:
             i_col_seleccion -= 1
             
-        elif tecla == Teclas().com_ctrl_a:
+        elif tecla == TECLAS.com_ctrl_a:
             if len(agregado) < lim_cant_agregados:
                 agregado.append('')
                 correctos.append(f'Nuevo espacio para {nombre_elemento} creado.')
@@ -1024,7 +1050,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                 errores.append(f'Solo puedes agregar {lim_cant_agregados}'
                                     f' {nombre_elemento}{final}')
             __limpar_cli()
-        elif tecla == Teclas().com_ctrl_x:
+        elif tecla == TECLAS.com_ctrl_x:
             if len(agregado) > 0:
                 i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
                 eliminado = agregado.pop(i_original)
@@ -1035,11 +1061,14 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
             else:
                 errores.append(f'No hay nada que borrar')
             __limpar_cli()
-        elif tecla == Teclas().com_ctrl_r or tecla == Teclas().com_ctrl_c:
+        elif tecla == TECLAS.com_ctrl_r or tecla == TECLAS.com_ctrl_c:
             __limpar_cli()
-            return agregado
+            if ref_transferencia is not None:
+                return ref_transferencia, agregado
+            else:
+                return agregado
         if len(agregado) > 0:
-            if tecla in LETRAS:
+            if tecla in LETRAS and not numerico:
                 i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
                 if len(agregado[i_original]) < tam_max_agregado:
                     agregado[i_original] += LETRAS_DIC[tecla]
@@ -1047,7 +1076,7 @@ def pantalla_agregado_centrada(tam_max_agregado: int,
                 i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
                 if len(agregado[i_original]) < tam_max_agregado:
                     agregado[i_original] += NUMEROS_DIC[tecla]
-            elif tecla == Teclas().tec_retroceso:
+            elif tecla == TECLAS.tec_retroceso:
                 i_original = (i_fila_seleccion)*(cols_agregado) + (i_col_seleccion)
                 if len(agregado[i_original]) > 0:
                     agregado[i_original] = agregado[i_original][:-1]  # Se le quita el ultimo caracter
@@ -1102,6 +1131,7 @@ def pantalla_de_mensajes(errores: List[str] = None, advertencias: List[str] = No
     todos_unidos = '\n'.join(todos_formateados)
     todos_centrados_vert = centrar_verticalmente(todos_unidos, filas_terminal - ENC_PIE, 3)
     
+    __limpar_cli()
     print(encabezados, todos_centrados_vert, pie)
     
     while True:

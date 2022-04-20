@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import Any, NamedTuple, Tuple, Union
+from typing import Any, Dict, NamedTuple, Tuple, Union, List
 
 
 class DatosSesion(NamedTuple):
@@ -347,4 +347,4 @@ NUMEROS_DIC = {
 class Opcion(NamedTuple):
     mensaje: str
     funcion: Any
-    nombretransf: Any
+    argumentos: Union[List[Any], None]

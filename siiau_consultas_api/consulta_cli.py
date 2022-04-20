@@ -16,6 +16,7 @@
 
 
 import json
+import re
 from .utiles import convertir_a_dict_recursivamente, tam_consola
 from .servicio_tabla import tabla_dos_columnas_valores
 from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
@@ -52,7 +53,7 @@ MNU_CENTROS = 'mnu_centros'
 
 # NOMBRES AGREGADOS
 AGR_CLASES = 'clases_agregadas'
-AGR_NRCS_EXCLUSICOS = 'nrcs_exclusivos'
+AGR_NRCS_EXCLUSIVOS = 'nrcs_exclusivos'
 
 # MENUS SELECCION (SEL -> SELECCION)
 MNU_SEL_CENTROS = 'centros_seleccionados'
@@ -82,8 +83,9 @@ DCARPUS_OFERTA = lambda usuario: f'{DCARP_USUARIOS}{usuario}{SEP}{NCARPUS_OFERTA
 # (o-------------------------------------o-------------------------------------o)
 
 
-def _crear_opcion(nombre_opcion: str, funcion):
-    return Opcion(nombre_opcion, funcion, nombre_opcion)
+def _crear_opcion(nombre_opcion: str, funcion, *args) -> Opcion:
+    argumentos = [*args] if args != None else None
+    return Opcion(nombre_opcion, funcion, argumentos)
 
 
 # (o-------------------------------------o-------------------------------------o)
@@ -100,10 +102,7 @@ def __agregar_clases_para_consultar():
     retorno = pantalla_para_agregar(
         7, 15, 'agregar clases', 'clave', transferencia=transferencia
     )
-    try:
-        info_ejecucion[MNU_OFERTA][AGR_CLASES] = retorno
-    except KeyError:
-        info_ejecucion[MNU_OFERTA][AGR_CLASES] = [*retorno]
+    info_ejecucion[MNU_OFERTA][AGR_CLASES] = retorno
     
 
 def __agregar_nrcs_exclusivos():
@@ -119,9 +118,45 @@ def __agregar_nrcs_exclusivos():
             ]
         )
         return
-    opciones = list(map(lambda x: _crear_opcion(
-        x, pantalla_para_agregar(6, 1, 'agregar nrcs exclusivos', 'nrc exclusivo')
+    try:
+        materias_anteriores = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS].keys()
+        if mat_agregadas != materias_anteriores:
+            for materia in mat_agregadas:
+                if materia not in materias_anteriores:
+                    info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS][materia] = []        
+        transferencia = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS]
+    except KeyError:
+        info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS] = {
+            llave : [] for llave in mat_agregadas
+        }
+        transferencia = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS]
+        
+    titulo_menu = 'agregar nrcs exclusivos'
+    sub_titulo_menu = 'agrega clases exclusivas para tu carrera'
+    opciones = list(map(lambda cve_materia: _crear_opcion(
+        cve_materia, 
+        pantalla_para_agregar, 
+        
+        # Desde aqui son argumentos para "panta_para_agregar"g
+        6, 
+        30, 
+        f'agregar nrcs exclusivos para {cve_materia}', 
+        'nrc exclusivo',
+        transferencia[cve_materia],
+        True,
+        cve_materia
+        # Hasta aqui son argumentos para "panta_para_agregar"
+        
     ), mat_agregadas))
+    retorno = menu_gen(
+        opciones,
+        False,
+        titulo_menu,
+        sub_titulo_menu
+    )
+    for nrcs_excl_una_materia in retorno:
+        cve_materia, nrcs_exclusivos = nrcs_excl_una_materia
+        info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS][cve_materia] = nrcs_exclusivos
 
 
 def __menu_consultar_oferta():
@@ -132,18 +167,18 @@ def __menu_consultar_oferta():
     titulo_menu = 'consultar oferta'
     sub_titulo_menu = 'consulta y procesa la oferta academica'
     opciones = [
-        Opcion('agregar clases para consultar', __agregar_clases_para_consultar, AGR_CLASES),
-        Opcion('agregar nrcs exclusivos', __agregar_nrcs_exclusivos, AGR_NRCS_EXCLUSICOS),
-        Opcion('ver clases agregadas', str, ''),
-        Opcion('ver clases', str, ''),
-        Opcion('generar posibles horarios', str, ''),
+        Opcion('agregar clases para consultar', __agregar_clases_para_consultar, None),
+        Opcion('agregar nrcs exclusivos', __agregar_nrcs_exclusivos, None),
+        Opcion('ver clases agregadas', str, None),
+        Opcion('ver clases', str, None),
+        Opcion('generar posibles horarios', str, None),
     ]
     menu_gen(
         opciones, 
         False,
         titulo_menu, 
         sub_titulo_menu, 
-        )
+    )
 
 
 
@@ -167,7 +202,7 @@ def __menu_centros():
     for un_centro in centros_universitarios:
         nombre_centro = un_centro.nombre_completo
         def retornar_centro(centro=un_centro): return centro
-        nueva_opcion = Opcion(nombre_centro, retornar_centro, MNU_SEL_CENTROS)
+        nueva_opcion = Opcion(nombre_centro, retornar_centro, None)
         opciones.append(nueva_opcion)
     retorno = menu_gen(
         opciones, 
@@ -204,7 +239,7 @@ def __menu_carreras():
     for una_carrera in carreras_centro:
         ref_carrera = una_carrera.ref_carrera
         def retornar_carrera(carrera=una_carrera): return carrera
-        nueva_opcion = Opcion(ref_carrera, retornar_carrera, MNU_SEL_CARRERAS)
+        nueva_opcion = Opcion(ref_carrera, retornar_carrera, None)
         opciones.append(nueva_opcion)
     memoria_total = {}
     retorno = menu_gen(
@@ -257,7 +292,7 @@ def __menu_clases():
                     titulo_materia = una_materia.titulo[:15] + "..."
                 nombre_materia = f'{una_materia.clave} {titulo_materia}'
                 def retornar_materia(materia=una_materia): return materia
-                nueva_opcion = Opcion(nombre_materia, retornar_materia, MNU_SEL_CLASES)
+                nueva_opcion = Opcion(nombre_materia, retornar_materia, None)
                 opciones.append(nueva_opcion)
     memoria_total = {}
     retorno = menu_gen(
@@ -319,13 +354,13 @@ def __consultar_centros():
 def menu_principal():
     titulo_menu = 'menu principal'
     opciones = [
-        Opcion('consultar oferta', __menu_consultar_oferta, MNU_OFERTA),
-        Opcion('consultar centros', __consultar_centros, MNU_CENTROS),
-        Opcion('* iniciar sesion', str, ''),
-        Opcion('consultar mi horario actual', str, ''),
-        Opcion('consultar mis carreras', str, ''),
-        Opcion('consultar mis horarios generados', str, ''),
-        Opcion('registrar clases', str, ''),
+        Opcion('consultar oferta', __menu_consultar_oferta, None),
+        Opcion('consultar centros', __consultar_centros, None),
+        Opcion('* iniciar sesion', str, None),
+        Opcion('consultar mi horario actual', str, None),
+        Opcion('consultar mis carreras', str, None),
+        Opcion('consultar mis horarios generados', str, None),
+        Opcion('registrar clases', str, None),
     ]
     
     # memoria_total = {}
@@ -335,6 +370,8 @@ def menu_principal():
         titulo_menu=titulo_menu, 
     )
     
+    info_final = convertir_a_dict_recursivamente(info_ejecucion)
+    print(json.dumps(info_final, indent=4))
     
     # exit(print(retorno_final, '\n', memoria_total))
 
