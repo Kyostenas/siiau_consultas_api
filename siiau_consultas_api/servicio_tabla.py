@@ -19,7 +19,7 @@ from .utiles import es_alguna_instancia
 
 from textwrap import wrap
 from tabulate import  tabulate
-from typing import NamedTuple, Union, List
+from typing import NamedTuple, Union, List, Tuple
 from os import get_terminal_size
 
 MAX_TAM_COL = 15
@@ -157,6 +157,22 @@ def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], espacio_total: in
         filas_tabla = list(zip(llaves, valores))
         filas_tabla = list(map(list, filas_tabla))
     encabezados = ['CAMPO', 'VALOR']
+    for i_fila, fila in enumerate(filas_tabla):
+        for i_col, col in enumerate(fila):
+            filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
+    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='fancy_grid')
+    
+    return tabla
+
+
+def tabla_generica(encabezados:Union[NamedTuple, List], 
+                   datos: Union[
+                       Tuple[Union[Tuple, List]], 
+                       List[Union[NamedTuple, List]]
+                    ],
+                   espacio_total: int):
+    tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
+    filas_tabla = datos
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
