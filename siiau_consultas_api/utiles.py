@@ -42,10 +42,10 @@ ELIMINADOR_ANSI = re.compile(r'\x1b\[[\d]*m')
 def convertir_ciclo_a_entero(ciclo: str) -> int:
     """
     Convierte el ciclo a entero considerando las posibles letras
-    que contenga como minusculas y conviertiendolas a su valor entero.
+    que contenga como minusculas y conviertiendolas a su valor entero::
 
-    202010 -> 202010
-    2020B -> '202010'
+        '202010' -> '202010'
+        '2020B' -> '202010'
     """
     quitar_letras = re.compile('[^\d]')
     quitar_numeros = re.compile('[\d]')
