@@ -16,10 +16,26 @@
 
 
 
-from .utiles import limpiar_html, particionar, convertir_ciclo_a_entero, aplanar_lista
-from .esquemas import (DatosHorarioSiiau, DatosSesion, HorarioCompletoSiiau, CarreraEstudiante,
-                            ClaseCompleta, CarreraCompleta, ClaseOferta, HorarioOferta, ProfesorOferta,
-                            CentroCompleto, DiasHorarioOferta, CicloCompleto)
+from .utiles import (
+    limpiar_html, 
+    particionar, 
+    convertir_ciclo_a_entero, 
+    aplanar_lista
+)
+from .esquemas import (
+    DatosHorarioSiiau, 
+    DatosSesion, 
+    HorarioCompletoSiiau, 
+    CarreraEstudiante,
+    ClaseCompleta, 
+    CarreraCompleta, 
+    ClaseOferta, 
+    HorarioOferta, 
+    ProfesorOferta,
+    CentroCompleto, 
+    DiasHorarioOferta, 
+    CicloCompleto
+)
 
 import requests.exceptions
 from typing import NamedTuple, Tuple, List, Union
@@ -365,6 +381,82 @@ def carreras(centro_cup_id: str) -> Tuple[CarreraCompleta]:
     return carreras_procesadas
 
 
+def grupo_de_clases(id_carrera: str, claves_materias: List[str]):
+    print(claves_materias)
+    tabla_clases = __tabla_clases(id_carrera)
+    clases_completas = []
+    prog_compl = 0
+    mat_compl = 0
+    clases_total = len(claves_materias)
+    progreso_total = clases_total + (11 * clases_total)
+    ignorar = False
+    for renglon_clase in tabla_clases:
+        # Ultimo renglón tiene "(c) 2002 Universidad de Guadalajara ..."
+        if None in renglon_clase:
+            continue
+        for i in claves_materias:
+            if i not in renglon_clase:
+                if ignorar is False:
+                    ignorar = True
+        if ignorar:
+            continue
+        else:
+            try:
+                progreso = __obtener_clase_completa(*renglon_clase[RANGO_SUBCLAVE_CLASES])
+                for paso, total_mat_com, clase_obtenida, _ in progreso:
+                    ref_elemento_clase = None
+                    if clase_obtenida != None:
+                        clase_completa = clase_obtenida
+                        ref_elemento_clase =  f'{clase_completa.clave} {clase_completa.titulo}'
+                    prog_compl += 1
+                    yield (
+                        prog_compl, 
+                        progreso_total, 
+                        None, 
+                        ref_elemento_clase, 
+                        mat_compl, 
+                        clases_total
+                    )
+            except:
+                prog_compl += 1
+                mat_compl += 1
+                yield prog_compl, progreso_total, False, None, mat_compl, clases_total
+            clases_completas.append(clase_completa)
+            prog_compl += 1
+            mat_compl += 1
+            yield prog_compl, progreso_total, None, None, mat_compl, clases_total
+    else:
+        exit()
+        yield (
+            prog_compl, 
+            progreso_total,
+            tuple(clases_completas), 
+            None, 
+            mat_compl, 
+            clases_total
+        )
+
+
+def __tabla_clases(id_carrera):
+    url_catalogo_clases = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.cataxcarr'])
+    payload = dict(carrerap=id_carrera,
+                   ordenp=1,
+                   mostrarp=5,
+                   tipop='T')
+    url_catalogo_clases = __join_payload_url(url_catalogo_clases, payload)
+    resp = request('GET',
+                   url=url_catalogo_clases,
+                   data=payload)
+    tabla_clases = __websp_findall(resp, name='td')
+    encabezados = __websp_findall(resp, name='th')
+    tabla_clases = list(map(limpiar_html, tabla_clases))[INICIO_TABLA_CLASES:]
+    encabezados = list(map(limpiar_html, encabezados))[INICIO_TABLA_CLASES:]
+    ancho_tabla = len(encabezados)
+    tabla_clases = particionar(tabla_clases, ancho_tabla)
+
+    return tabla_clases
+
+
 def __obtener_clase_completa(area, clave_clase, ciclo_inicio=''):
     url_clase_completa = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.detmate'])
     yield 1, 11, None, None
@@ -403,22 +495,7 @@ def __obtener_clase_completa(area, clave_clase, ciclo_inicio=''):
 
 
 def clases(id_carrera: str):
-    url_catalogo_clases = ''.join([URL_CONSULTA_SIIAU, '/wco/scpcata.cataxcarr'])
-    payload = dict(carrerap=id_carrera,
-                   ordenp=1,
-                   mostrarp=5,
-                   tipop='T')
-    url_catalogo_clases = __join_payload_url(url_catalogo_clases, payload)
-    resp = request('GET',
-                   url=url_catalogo_clases,
-                   data=payload)
-    tabla_clases = __websp_findall(resp, name='td')
-    encabezados = __websp_findall(resp, name='th')
-    tabla_clases = list(map(limpiar_html, tabla_clases))[INICIO_TABLA_CLASES:]
-    encabezados = list(map(limpiar_html, encabezados))[INICIO_TABLA_CLASES:]
-    ancho_tabla = len(encabezados)
-    tabla_clases = particionar(tabla_clases, ancho_tabla)
-
+    tabla_clases = __tabla_clases(id_carrera)
     clases_completas = []
     prog_compl = 0
     mat_compl = 0
