@@ -39,7 +39,8 @@ setup(
   ],
   entry_points={
     'console_scripts': [
-      'siiau = siiau_consultas_api:estatus_siiau'
+      'siiau = siiau_consultas_api:estatus_siiau',
+      'siiau-horario = siiau_consultas_api:horario_siiau',
     ]
   }
 )

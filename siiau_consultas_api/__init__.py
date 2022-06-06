@@ -1,4 +1,7 @@
-from .consulta_cli import estatus_siiau
+from .consulta_cli import (
+    estatus_siiau,
+    horario_siiau
+)
 
 __version__ = '0.0.1'
 

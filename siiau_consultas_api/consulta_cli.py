@@ -16,6 +16,7 @@
 
 # from .utiles import convertir_a_dict_recursivamente, tam_consola
 # from .servicio_tabla import tabla_dos_columnas_valores, tabla_generica
+from email.policy import default
 from .esquemas import (
     CarreraEstudiante,
     Opcion, 
@@ -56,7 +57,12 @@ from .utiles import (
 )
 from .servicio_tabla import (
     tabla_dos_columnas_valores,
-    tabla_generica
+    tabla_generica,
+    named_tuple_a_tabla
+)
+from .servicio_horario_siiau import (
+    compactar_horario_por_clases,
+    estructurar_horario_por_clases,
 )
 
 from typing import List, Tuple
@@ -249,19 +255,35 @@ def leer_usuario(archivo_usuario: str) -> dict:
     return datos_usuario
 
 
-def revisar_sesion(datos_usuario: dict):
+def __reemplazar_carrera_o_ciclo(carrera, ciclo) -> bool:
+    return carrera is not None or ciclo is not None
+
+
+def revisar_sesion(datos_usuario: dict, 
+                   carrera_seleccion: str=None, 
+                   ciclo_seleccion: str=None):
     usuario = datos_usuario['usuario']
-    contra = datos_usuario['contra']
-    carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
     try:
         datos_sesion: DatosSesion = leer_archivo_dat(
             f'{DCARP_CACHE}_temp__{usuario}.dat'
         )['sesion']
-        carrera = datos_sesion.carrera
-        ciclo = datos_sesion.ciclo
+        if __reemplazar_carrera_o_ciclo(carrera_seleccion, ciclo_seleccion):
+            ciclo_reemplazo = datos_sesion.ciclo
+            carrera_reemplazo = datos_sesion.carrera
+            if ciclo_seleccion is not None:
+                ciclo_reemplazo = ciclo_seleccion
+            if carrera_seleccion is not None:
+                carrera_reemplazo = carrera_seleccion
+            datos_sesion = DatosSesion(
+                cookies=datos_sesion.cookies,
+                pidmp=datos_sesion.pidmp,
+                ciclo=ciclo_reemplazo,
+                carrera=carrera_reemplazo
+            )
         sesion = obtener_sesion(sesion_guardada=datos_sesion)
     except FileNotFoundError:
-        imprimir(log(error('Sesion no encontrada'), TRAZO))
+        contra = datos_usuario['contra']
+        carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
         carrera: CarreraEstudiante = carreras[-1]
         carrera = carrera.ref_carrera
         ciclo = _obtener_dato('Ciclo')
@@ -270,6 +292,12 @@ def revisar_sesion(datos_usuario: dict):
             f'{DCARP_CACHE}_temp__{usuario}.dat',
             sesion=sesion.sesion
         )
+        if __reemplazar_carrera_o_ciclo(carrera_seleccion, ciclo_seleccion):
+            return revisar_sesion(
+                datos_usuario,
+                carrera_seleccion,
+                ciclo_seleccion
+            )
         
     return sesion
 
@@ -314,7 +342,39 @@ def mostrar_estatus(archivos_usuarios: str):
         estilo='plain'
     )
     imprimir(tabla_datos)
+    
+    
+def revisar_archivos(ver_directorios=True):
+    if ver_directorios:
+        revisar_directorios()
+    usuarios, archivos_usuarios = revisar_archivos_inicio()
+    return {'usuarios': usuarios, 'archivos_usuarios': archivos_usuarios}
 
+
+def mostrar_horario(compacto: str, 
+                    carrera: str, 
+                    ciclo: str, 
+                    archivos_usuarios: str):
+    datos_usuario = leer_usuario(archivos_usuarios[0])
+    sesion_revisada = revisar_sesion(
+        datos_usuario=datos_usuario,
+        carrera_seleccion=carrera,
+        ciclo_seleccion=ciclo
+    )
+    datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
+    horario = datos_horario.horario
+    if compacto:
+        estructurado = estructurar_horario_por_clases(horario)
+        compactado = compactar_horario_por_clases(estructurado)
+        tabla = named_tuple_a_tabla(
+            compactado, 
+            por_columnas=True, 
+            horario_compacto=True
+        )
+    else:
+        tabla = named_tuple_a_tabla(horario, por_columnas=True)
+    
+    imprimir(tabla)
 
 
 
@@ -323,17 +383,60 @@ def mostrar_estatus(archivos_usuarios: str):
 def estatus_siiau():
     """
     Revisa tu estatus actual como estudiante de la UDG.
-    Comprueba si existe una sesión abierta.
+    Comprueba si existe una sesion abierta.
     """
-    revisar_directorios()
-    usuarios, archivos_usuarios = revisar_archivos_inicio()
+    datos_inicio = revisar_archivos()
+    usuarios = datos_inicio['usuarios']
     if len(usuarios) == 0:
         agregar_datos_de_inicio()
-        _, archivos_usuarios = revisar_archivos_inicio()
+        datos_inicio = revisar_archivos()
+        archivos_usuarios = datos_inicio['archivos_usuarios']
         mostrar_estatus(archivos_usuarios)
     elif len(usuarios) == 1:
+        archivos_usuarios = datos_inicio['archivos_usuarios']
         mostrar_estatus(archivos_usuarios)
     else:
-        print('MAL')
-
-
+        pass
+    
+    
+@click.command()
+@click.option(
+    '--compacto', 
+    '-c',
+    is_flag=True,
+    default=False,
+    help='Mostrar el horario en una tabla compacta que tiene horas por fila.'
+)
+@click.option(
+    '--carrera',
+    type=(str),
+    help=(
+        'Cambiar la carrera de la cual obtener el horario. Por defecto se obtiene '
+        'la ultima carrera registrada del usuario activo.'
+    )
+)
+@click.option(
+    '--ciclo',
+    type=(str),
+    help=(
+        'Cambiar el ciclo del cual obtener el horario. Por defecto se obtiene '
+        'el ultimo ciclo de la ultima carrera registrada del usuario activo ' 
+        'o la seleccionada.'
+    )
+)
+def horario_siiau(compacto, carrera, ciclo):
+    """
+    Obten tu horario de siiau.
+    """
+    datos_inicio = revisar_archivos()
+    usuarios = datos_inicio['usuarios']
+    if len(usuarios) == 0:
+        agregar_datos_de_inicio()
+        datos_inicio = revisar_archivos()
+        archivos_usuarios = datos_inicio['archivos_usuarios']
+        mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
+    elif len(usuarios) == 1:
+        archivos_usuarios = datos_inicio['archivos_usuarios']
+        mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
+    else:
+        pass

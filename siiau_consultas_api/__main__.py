@@ -1,4 +1,7 @@
-from . import estatus_siiau
+from . import (
+    estatus_siiau,
+    horario_siiau
+)
 
 
 # if __name__ == '__main__':
