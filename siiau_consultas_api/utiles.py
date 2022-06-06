@@ -23,10 +23,16 @@ la pena instalar una libreria o hacer un script sólo
 para suplirla.
 """
 
-import re, io, json, xlwt, os
 from typing import NamedTuple, Tuple
+import re, io, json, xlwt, os
 from xlwt import Workbook
+from click import echo
 import datetime
+import pickle
+import click
+
+from .getch import getch
+
 
 VALORES_CICLOS = {
     'A': '10',
@@ -37,6 +43,8 @@ VALORES_CICLOS = {
 #   \x1b[47m
 # Estas son las que maneja colorama, utilizado en el cli.
 ELIMINADOR_ANSI = re.compile(r'\x1b\[[\d]*m')
+
+ESC_CODE = '\x1b'
 
 
 def convertir_ciclo_a_entero(ciclo: str) -> int:
@@ -128,6 +136,25 @@ def escribir_json(datos, dir_archivo) -> None:
     with open(dir_archivo, 'w', encoding='utf-8') as archivo_json:
         json.dump(datos, archivo_json, ensure_ascii=False, indent=4)
     archivo_json.close()
+    
+
+def escribir_archivo_dat(dir_archivo, **datos) -> None:
+    """
+    Escribir archivo de datos en formato .dat
+    """
+    with open(dir_archivo, 'wb') as archivo_dat:
+        archivo_dat.write(pickle.dumps(datos))
+    archivo_dat.close()
+
+
+def leer_archivo_dat(dir_archivo) -> dict:
+    """
+    Leer archivo de datos en formato .dat
+    """
+    with open(dir_archivo, 'rb') as archivo_dat:
+        datos = pickle.loads(archivo_dat.read())
+    archivo_dat.close()
+    return datos
 
 
 def leer_json(dir_archivo) -> dict:
@@ -257,12 +284,14 @@ def limpiar_secuencias_ANSI(cadena, reemplazo=''):
     # La cadena que sera limpiada -----------+
 
 
-def tam_consola() -> Tuple[int, int]:
+def tam_consola() -> dict:
     """
-    retorna ```(cols, filas)```
+    retorna::
+        
+        {'cols': int, 'filas': int}
     """
     cols_terminal, filas_terminal = os.get_terminal_size()
-    return cols_terminal, filas_terminal
+    return {'cols': cols_terminal, 'filas': filas_terminal}
 
 
 def barra_progreso(total, progreso, imprimir=False, mensaje='cargando'):
@@ -299,3 +328,57 @@ def convertir_a_dict_recursivamente(objeto):
             return tuple([convertir_a_dict_recursivamente(v) for v in objeto])
     else:
         return objeto
+    
+    
+def __limpar_cli():
+    limpiar_pantalla()
+    regresar_cursor_inicio_pantalla()
+    
+ 
+def __soobreescribir_cli():
+    cols_consola, filas_consola = tam_consola()
+    barra_vacia = ' ' * (cols_consola - 1)
+    cuadro_vacio = '\n'.join([barra_vacia for _ in range(filas_consola - 1)])
+    print(cuadro_vacio)
+
+
+def leer_tecla(retornar_original = False):
+    # TODO probar compatibilidad con Windows
+    ch = getch()
+    # print([ch])
+    if ch == ESC_CODE:
+        otro_ch = getch()
+        if otro_ch == '[':
+            ch += '['
+            decisivo_ctrl = getch()
+            if decisivo_ctrl.isnumeric():
+                ch += decisivo_ctrl
+                ch += getch()
+                ch += getch()
+                ch += getch()
+            else:
+                ch += decisivo_ctrl
+            if retornar_original:
+                return sum(map(ord, ch)), ch
+            else:
+                return sum(map(ord, ch))
+        else:
+            print([[otro_ch]])
+            if retornar_original:
+                return ord(ch), ch
+            else:
+                return ord(ch)
+    else:
+        if retornar_original:
+            return ord(ch), ch
+        else:
+            return ord(ch)
+        
+
+def imprimir(texto, nl=True, **kwargs):
+    """
+    Imprime un mensaje en la consola.
+    """
+    click.echo(message=texto, nl=nl, **kwargs)
+
+    

@@ -14,24 +14,56 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-import json
-import re
-from .utiles import convertir_a_dict_recursivamente, tam_consola
-from .servicio_tabla import tabla_dos_columnas_valores
-from .esquemas import Opcion, Teclas, CentroCompleto, CarreraCompleta, ClaseCompleta
+# from .utiles import convertir_a_dict_recursivamente, tam_consola
+# from .servicio_tabla import tabla_dos_columnas_valores, tabla_generica
+from .esquemas import (
+    CarreraEstudiante,
+    Opcion, 
+    Teclas, 
+    CentroCompleto, 
+    CarreraCompleta, 
+    ClaseCompleta,
+    DatosSesion,
+    DatosHorarioSiiau
+)
 from .getch import getch
-from .servicio_consulta_siiau import oferta_academica, Siiau, centros, carreras, clases
-from .servicio_oferta_siiau import estructurar_oferta_como_horario
-from .cli import menu_generico_seleccion as menu_gen, sub_titulo
-from .cli import pantalla_agregado_centrada as pantalla_para_agregar
-from .cli import titulo, advertencia, error, correcto, ayuda, log, seleccion
-from .cli import (pantalla_carga,
-                  pantalla_informacion_en_paginas,
-                  pantalla_de_mensajes,
-                  __leer_tecla)
+from .servicio_consulta_siiau import (
+    grupo_de_clases, 
+    oferta_academica, 
+    Alumno, 
+    centros, 
+    carreras, 
+    clases,
+)
+from .colores import (
+    titulo, 
+    advertencia, 
+    error, 
+    correcto, 
+    ayuda, 
+    log, 
+    seleccion,
+    sub_titulo
+)
+from .utiles import (
+    leer_tecla,
+    imprimir,
+    leer_archivo_dat,
+    escribir_archivo_dat,
+    leer_json,
+    escribir_json,
+    escribir_excel
+)
+from .servicio_tabla import (
+    tabla_dos_columnas_valores,
+    tabla_generica
+)
 
 from typing import List, Tuple
+from os import get_terminal_size
+import json
+import re
+import click
 import os
     
 
@@ -41,6 +73,9 @@ RAIZ_US = os.path.expanduser(f'~')
 SEP = os.sep
 TEXTO_COLOR = 0
 TRAZO = 'siiaucli'
+LIMPIAR = '\r'
+TECLAS = Teclas()
+seesion = None
 
 # (o-------------------------- TRANSFERENCIA INTERNA --------------------------o)
 info_ejecucion = {}
@@ -64,7 +99,7 @@ MNU_SEL_CLASES = 'clases_seleccionadas'
 
 # (o------------------------ ALMACENAJE DE INFORMACION ------------------------o)
 # NOMBRES CARPETAS (N -> NOMBRE, CARP -> CARPETA)
-NCARP_RAIZ = '.siiaucli'
+NCARP_RAIZ = '.siiau'
 NCARP_USUARIOS = 'usuarios'
 NCAPR_CACHE = 'cachetemp'
 # carpetas del usuario (US -> USUARIO)
@@ -83,298 +118,6 @@ DCARPUS_OFERTA = lambda usuario: f'{DCARP_USUARIOS}{usuario}{SEP}{NCARPUS_OFERTA
 # (o-------------------------------------o-------------------------------------o)
 
 
-def _crear_opcion(nombre_opcion: str, funcion, *args) -> Opcion:
-    argumentos = [*args] if args != None else None
-    return Opcion(nombre_opcion, funcion, argumentos)
-
-
-# (o-------------------------------------o-------------------------------------o)
-# |                              CONSULTAR OFERTA                               |
-# |:-------------------------------------o-------------------------------------:|
-# | inicio                                                               inicio |
-
-
-def __agregar_clases_para_consultar():
-    try:
-        transferencia = info_ejecucion[MNU_OFERTA][AGR_CLASES]
-    except KeyError:
-        transferencia = []
-    retorno = pantalla_para_agregar(
-        7, 15, 'agregar clases', 'clave', transferencia=transferencia
-    )
-    info_ejecucion[MNU_OFERTA][AGR_CLASES] = retorno
-    
-
-def __agregar_nrcs_exclusivos():
-    try:
-        mat_agregadas = info_ejecucion[MNU_OFERTA][AGR_CLASES]
-    except KeyError:
-        pantalla_de_mensajes(
-            errores=[
-                'No hay clases registradas aun'
-            ],
-            ayudas=[
-                'Primero registra una materia en "agregar clases para consultar"'
-            ]
-        )
-        return
-    try:
-        materias_anteriores = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS].keys()
-        if mat_agregadas != materias_anteriores:
-            for materia in mat_agregadas:
-                if materia not in materias_anteriores:
-                    info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS][materia] = []        
-        transferencia = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS]
-    except KeyError:
-        info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS] = {
-            llave : [] for llave in mat_agregadas
-        }
-        transferencia = info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS]
-        
-    titulo_menu = 'agregar nrcs exclusivos'
-    sub_titulo_menu = 'agrega clases exclusivas para tu carrera'
-    opciones = list(map(lambda cve_materia: _crear_opcion(
-        cve_materia, 
-        pantalla_para_agregar, 
-        
-        # Desde aqui son argumentos para "panta_para_agregar"g
-        6, 
-        30, 
-        f'agregar nrcs exclusivos para {cve_materia}', 
-        'nrc exclusivo',
-        transferencia[cve_materia],
-        True,
-        cve_materia
-        # Hasta aqui son argumentos para "panta_para_agregar"
-        
-    ), mat_agregadas))
-    retorno = menu_gen(
-        opciones,
-        False,
-        titulo_menu,
-        sub_titulo_menu
-    )
-    for nrcs_excl_una_materia in retorno:
-        cve_materia, nrcs_exclusivos = nrcs_excl_una_materia
-        info_ejecucion[MNU_OFERTA][AGR_NRCS_EXCLUSIVOS][cve_materia] = nrcs_exclusivos
-
-
-def __menu_consultar_oferta():
-    try:
-        info_ejecucion[MNU_OFERTA]
-    except KeyError:
-        info_ejecucion[MNU_OFERTA] = {}
-    titulo_menu = 'consultar oferta'
-    sub_titulo_menu = 'consulta y procesa la oferta academica'
-    opciones = [
-        Opcion('agregar clases para consultar', __agregar_clases_para_consultar, None),
-        Opcion('agregar nrcs exclusivos', __agregar_nrcs_exclusivos, None),
-        Opcion('ver clases agregadas', str, None),
-        Opcion('ver clases', str, None),
-        Opcion('generar posibles horarios', str, None),
-    ]
-    menu_gen(
-        opciones, 
-        False,
-        titulo_menu, 
-        sub_titulo_menu, 
-    )
-
-
-
-# | fin                                                                     fin |
-# |:-------------------------------------o-------------------------------------:|
-# |                              CONSULTAR OFERTA                               |
-# (o-------------------------------------o-------------------------------------o)
-
-
-
-# (o-------------------------------------o-------------------------------------o)
-# |                             CONSULTAR CENTROS                               |
-# |:-------------------------------------o-------------------------------------:|
-# | inicio                                                               inicio |
-
-
-def __menu_centros():
-    titulo = 'centros universitarios de la UDG'
-    opciones = []
-    centros_universitarios = centros()
-    for un_centro in centros_universitarios:
-        nombre_centro = un_centro.nombre_completo
-        def retornar_centro(centro=un_centro): return centro
-        nueva_opcion = Opcion(nombre_centro, retornar_centro, None)
-        opciones.append(nueva_opcion)
-    retorno = menu_gen(
-        opciones, 
-        principal=False, 
-        titulo_menu=titulo, 
-        regresar_en_seleccion=True,
-        cuadricula=True,
-    )
-    
-    if retorno is None:
-        return None
-
-    try:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CENTROS][SELECCIONES].append(retorno)
-    except KeyError:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CENTROS] = {TIPO: CentroCompleto.__name__}
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CENTROS][SELECCIONES] = [retorno]
-        
-
-
-def __menu_carreras():
-    try:
-        centro: CentroCompleto = (
-            info_ejecucion[MNU_CENTROS][MNU_SEL_CENTROS][SELECCIONES][-1]
-        )
-        if centro is None:
-            return None
-    except KeyError:
-        return None
-    
-    titulo = f'carreras de {centro.nombre_completo}'
-    opciones = []
-    carreras_centro = carreras(centro.id_centro)
-    for una_carrera in carreras_centro:
-        ref_carrera = una_carrera.ref_carrera
-        def retornar_carrera(carrera=una_carrera): return carrera
-        nueva_opcion = Opcion(ref_carrera, retornar_carrera, None)
-        opciones.append(nueva_opcion)
-    memoria_total = {}
-    retorno = menu_gen(
-        opciones, 
-        principal=False, 
-        titulo_menu=titulo, 
-        regresar_en_seleccion=True,
-        cuadricula=True
-    )
-    
-    try:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CARRERAS][SELECCIONES].append(retorno)
-    except KeyError:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CARRERAS] = {TIPO: CarreraCompleta.__name__}
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CARRERAS][SELECCIONES] = [retorno]
-        
-
-
-def __menu_clases():
-    try:
-        carrera: CarreraCompleta = (
-            info_ejecucion[MNU_CENTROS][MNU_SEL_CARRERAS][SELECCIONES][-1]
-        )
-        if carrera is None:
-            return None
-    except KeyError:
-        return None
-    
-    titulo = f'clases de {carrera.nombre_completo} ({carrera.ref_carrera})'
-    titulo_barra = f'descargando y procesando clases de {carrera.ref_carrera}'
-    opciones = []
-    clases_carrera = clases(carrera.ref_carrera)
-    for progreso, total, obtenidas, ref_elemento, els_comp, els_totales in clases_carrera:
-        if obtenidas == None:
-            pantalla_carga(
-                total, 
-                progreso,
-                els_totales,
-                els_comp, 
-                titulo_barra, 
-                'materia', 
-                ref_elemento
-            )
-        else:
-            for una_materia in obtenidas:
-                una_materia: ClaseCompleta
-                if len(una_materia.titulo) <= 15:
-                    titulo_materia = una_materia.titulo
-                else:
-                    titulo_materia = una_materia.titulo[:15] + "..."
-                nombre_materia = f'{una_materia.clave} {titulo_materia}'
-                def retornar_materia(materia=una_materia): return materia
-                nueva_opcion = Opcion(nombre_materia, retornar_materia, None)
-                opciones.append(nueva_opcion)
-    memoria_total = {}
-    retorno = menu_gen(
-        opciones, 
-        principal=False, 
-        titulo_menu=titulo, 
-        regresar_en_seleccion=True,
-        cuadricula=True
-    )
-    
-    try:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CLASES][SELECCIONES].append(retorno)
-    except KeyError:
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CLASES] = {TIPO: ClaseCompleta.__name__}
-        info_ejecucion[MNU_CENTROS][MNU_SEL_CLASES][SELECCIONES] = [retorno]
-
-
-def __consultar_centros():
-    cols_terminal, _ = tam_consola()
-    info_ejecucion[MNU_CENTROS] = {}
-    
-    __menu_centros()
-    centro = True
-    carrera = True
-    clase = True
-    while True:
-        if centro:
-            __menu_carreras()
-            centro = False
-        if carrera:
-            __menu_clases()
-            carrera = False
-        if clase:
-            try:
-                clase_obtenida = (
-                    info_ejecucion[MNU_CENTROS][MNU_SEL_CLASES][SELECCIONES][-1]
-                )
-                if clase_obtenida is None:
-                    return None
-            except KeyError:
-                return None
-            
-            tabla_materia = tabla_dos_columnas_valores(clase_obtenida, cols_terminal)
-            pantalla_informacion_en_paginas(
-                titulo_pantalla='INFORMACION DE MATERIA',
-                paginas=[(clase_obtenida.clave, tabla_materia)]
-            )
-            clase = False
-
-            return
-
-
-# | fin                                                                     fin |
-# |:-------------------------------------o-------------------------------------:|
-# |                             CONSULTAR CENTROS                               |
-# (o-------------------------------------o-------------------------------------o)
-
-
-def menu_principal():
-    titulo_menu = 'menu principal'
-    opciones = [
-        Opcion('consultar oferta', __menu_consultar_oferta, None),
-        Opcion('consultar centros', __consultar_centros, None),
-        Opcion('* iniciar sesion', str, None),
-        Opcion('consultar mi horario actual', str, None),
-        Opcion('consultar mis carreras', str, None),
-        Opcion('consultar mis horarios generados', str, None),
-        Opcion('registrar clases', str, None),
-    ]
-    
-    # memoria_total = {}
-    menu_gen(
-        opciones, 
-        True, 
-        titulo_menu=titulo_menu, 
-    )
-    
-    info_final = convertir_a_dict_recursivamente(info_ejecucion)
-    print(json.dumps(info_final, indent=4))
-    
-    # exit(print(retorno_final, '\n', memoria_total))
-
 
 def __existe_directorio(directorio: str) -> bool:
     """
@@ -390,47 +133,43 @@ def __existe_directorio(directorio: str) -> bool:
 def __comprobar_directorios(*directorios) -> List[str]:
     directorios_por_crear = []
     for directorio in directorios:
-        if __existe_directorio(directorio):
-            print(log(correcto(f'"{directorio}" encontrado')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
-        else:
-            print(log(advertencia(f'"{directorio}" no existe')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
+        if not __existe_directorio(directorio):
             directorios_por_crear.append(directorio)
     return directorios_por_crear
 
     
-def main():
-    teclas = Teclas()
-    print(titulo('INICIALIZANDO SIIAU-CLI')[TEXTO_COLOR], end='\n\n')
-    print(log('comprobando directorios', TRAZO)[TEXTO_COLOR])
+def revisar_directorios():
+    TECLAS
     directorios_por_crear = __comprobar_directorios(DCARP_USUARIOS, DCARP_CACHE)
     if directorios_por_crear.__len__() > 0:
         char_crear_carpetas = ' '
         incorrecto = False
         preguntar_de_nuevo = True
-        pregunta = log('¿crear carpetas? (S/N)', TRAZO)[TEXTO_COLOR]
+        imprimir(log('Es necesario crear una serie de carpetas...', TRAZO))
+        pregunta = log('¿crear carpetas? (S/N)', TRAZO)
         while True:
             if incorrecto:
-                char_rojo = error(char_crear_carpetas, mostrar_pre=False)[TEXTO_COLOR]
-                print(f'{pregunta} {char_rojo}', flush=True, end='\r')
+                char_rojo = error(char_crear_carpetas, mostrar_pre=False)
+                imprimir(f'{LIMPIAR}{pregunta} {char_rojo}', nl=False)
             else:
-                print(f'{pregunta} {char_crear_carpetas}', flush=True, end='\r')
+                imprimir(f'{LIMPIAR}{pregunta} {char_crear_carpetas}', nl=False)
             if preguntar_de_nuevo:
-                crear_carpetas, char_crear_carpetas = __leer_tecla(retornar_original=True)
-                if crear_carpetas in [teclas.tec_flecha_ar, teclas.tec_flecha_ab]:
+                crear_carpetas, char_crear_carpetas = leer_tecla(retornar_original=True)
+                if crear_carpetas in [TECLAS.tec_flecha_ar, TECLAS.tec_flecha_ab]:
                     crear_carpetas = ''
             else:
                 preguntar_de_nuevo = True
-            if crear_carpetas == teclas.com_ctrl_c:
-                exit(print('Hasta luego'))
+            if crear_carpetas == TECLAS.com_ctrl_c:
+                exit(imprimir('Hasta luego'))
             if char_crear_carpetas in ['N', 'n', 'S', 's']:
                 if incorrecto:
                     incorrecto = False
-                print(f'{pregunta} {char_crear_carpetas}', flush=True, end='\r')
+                imprimir(f'{LIMPIAR}{pregunta} {char_crear_carpetas}', nl=False)
                 aux = char_crear_carpetas
-                enter, char_crear_carpetas = __leer_tecla(retornar_original=True)
-                if enter in [teclas.tec_flecha_ar, teclas.tec_flecha_ab]:
+                enter, char_crear_carpetas = leer_tecla(retornar_original=True)
+                if enter in [TECLAS.tec_flecha_ar, TECLAS.tec_flecha_ab]:
                     enter = ''
-                if enter == teclas.tec_enter:
+                if enter == TECLAS.tec_enter:
                     char_crear_carpetas = aux
                     if char_crear_carpetas in ['S', 's']:
                         crear = True
@@ -440,34 +179,161 @@ def main():
                         break
                     else:
                         pass
-                elif enter == teclas.com_ctrl_c:
-                    exit(print('Hasta luego'))
+                elif enter == TECLAS.com_ctrl_c:
+                    exit(imprimir('Hasta luego'))
                 else:
                     preguntar_de_nuevo = False
             else:
                 incorrecto = True
 
-        pregunta = log('¿Crear carpetas?', TRAZO)[TEXTO_COLOR]
-        print(' ' * os.get_terminal_size()[0], flush=True, end='\r')
-        print(pregunta, sub_titulo(char_crear_carpetas)[TEXTO_COLOR], flush=True)
+        pregunta = log('¿Crear carpetas?', TRAZO)
+        imprimir(LIMPIAR + ' ' * os.get_terminal_size()[0], nl=False)
+        imprimir(LIMPIAR + pregunta + ' ' + sub_titulo(char_crear_carpetas))
         
         if crear:
             for directorio in directorios_por_crear:
                 os.makedirs(directorio)
-                print(log(correcto(f'{directorio} creado')[TEXTO_COLOR], TRAZO)[TEXTO_COLOR])
+                imprimir(log(correcto(f'{directorio} creado'), TRAZO))
         else:
-            msj_error = log(error(
-                'se requieren los directorios para funcionar'
-            )[TEXTO_COLOR], TRAZO)[TEXTO_COLOR]
-            exit(print(msj_error))
+            msj_error = log(error('se requieren los directorios para funcionar'), TRAZO)
+            exit(imprimir(msj_error))
     
-    print(log('presione ENTER para comenzar', TRAZO)[TEXTO_COLOR])
-    while True:
-        tecla = __leer_tecla()
-        if tecla == teclas.tec_enter:
-            break
-        elif tecla == teclas.com_ctrl_c:
-            exit(print('Hasta luego'))
+        imprimir(log('presione ENTER para continuar', TRAZO))
+        while True:
+            tecla = leer_tecla()
+            if tecla == TECLAS.tec_enter:
+                break
+            elif tecla == TECLAS.com_ctrl_c:
+                exit(imprimir('Hasta luego'))
+                
+                
+def _obtener_dato_secreto(mensaje: str) -> str:
+    imprimir(f'{mensaje}: ', nl=False)
+    tecleado = []
+    num_tecla = None
+    while num_tecla != TECLAS.tec_enter:
+        num_tecla, tecla = leer_tecla(retornar_original=True)
+        if num_tecla == TECLAS.tec_retroceso:
+            tecleado.pop()
+        elif num_tecla != TECLAS.tec_enter:
+            tecleado.append(tecla)
+    imprimir('')
+        
+    return ''.join(tecleado)
+
+
+def _obtener_dato(mensaje: str) -> str:
+    return input(f'{mensaje}: ')
+         
+                
+def revisar_archivos_inicio() -> list:
+    """
+    Retorna::
     
-    menu_principal()
+        (sin_extension, arhivos_usuarios)
+        
+    El primero contiene solo los codigos de los usuarios registrados.
+    
+    El segundo el nombre de los archivos completos.
+    """
+    archivos_usuarios = os.listdir(DCARP_USUARIOS)
+    sin_extension = map(lambda x: x.split('.')[0], archivos_usuarios)
+    return list(sin_extension), archivos_usuarios
+                
+                
+def leer_usuario(archivo_usuario: str) -> dict:
+    datos_usuario = leer_archivo_dat(
+        f'{DCARP_USUARIOS}{archivo_usuario}'
+    )
+    
+    return datos_usuario
+
+
+def revisar_sesion(datos_usuario: dict):
+    usuario = datos_usuario['usuario']
+    contra = datos_usuario['contra']
+    carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
+    try:
+        datos_sesion: DatosSesion = leer_archivo_dat(
+            f'{DCARP_CACHE}_temp__{usuario}.dat'
+        )['sesion']
+        carrera = datos_sesion.carrera
+        ciclo = datos_sesion.ciclo
+        sesion = obtener_sesion(sesion_guardada=datos_sesion)
+    except FileNotFoundError:
+        imprimir(log(error('Sesion no encontrada'), TRAZO))
+        carrera: CarreraEstudiante = carreras[-1]
+        carrera = carrera.ref_carrera
+        ciclo = _obtener_dato('Ciclo')
+        sesion = obtener_sesion(usuario, contra, carrera, ciclo)
+        escribir_archivo_dat(
+            f'{DCARP_CACHE}_temp__{usuario}.dat',
+            sesion=sesion.sesion
+        )
+        
+    return sesion
+
+
+def obtener_sesion(usuario='', clave='', carrera='', ciclo='', sesion_guardada=None):
+    if sesion_guardada is not None:
+        nuevo_inicio_siiau = Alumno(sesion=sesion_guardada)
+    else:
+        nuevo_inicio_siiau = Alumno(
+            codigo=usuario, 
+            clave=clave, 
+            carrera=carrera, 
+            ciclo=ciclo
+        )
+        
+    return nuevo_inicio_siiau
+
+
+def agregar_datos_de_inicio():
+    usuario = _obtener_dato_secreto('Usuario (ID estudiante)')
+    contra = _obtener_dato_secreto('Clave de SIIAU')
+    sesion = obtener_sesion(usuario, contra)
+    try:
+        carreras = sesion.carreras()
+        escribir_archivo_dat(
+            f'{DCARP_USUARIOS}{usuario}.dat',
+            usuario=usuario,
+            contra=contra,
+            carreras=carreras
+        )
+    except IndexError:
+        imprimir(log(error('Datos incorrectos'), TRAZO))
+        exit()
+        
+
+def mostrar_estatus(archivos_usuarios: str):
+    datos_usuario = leer_usuario(archivos_usuarios[0])
+    sesion_revisada = revisar_sesion(datos_usuario)
+    datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
+    tabla_datos = tabla_dos_columnas_valores(
+        datos=datos_horario.datos_estudiante,
+        estilo='plain'
+    )
+    imprimir(tabla_datos)
+
+
+
+
+
+@click.command()
+def estatus_siiau():
+    """
+    Revisa tu estatus actual como estudiante de la UDG.
+    Comprueba si existe una sesión abierta.
+    """
+    revisar_directorios()
+    usuarios, archivos_usuarios = revisar_archivos_inicio()
+    if len(usuarios) == 0:
+        agregar_datos_de_inicio()
+        _, archivos_usuarios = revisar_archivos_inicio()
+        mostrar_estatus(archivos_usuarios)
+    elif len(usuarios) == 1:
+        mostrar_estatus(archivos_usuarios)
+    else:
+        print('MAL')
+
 

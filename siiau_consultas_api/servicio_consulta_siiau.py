@@ -559,10 +559,13 @@ def obtener_sesion(codigo, clave, carrera, ciclo):
         raise ConnectionError('No se pudo iniciar sesion en siiau')
 
 
-class Siiau:
+class Alumno:
 
-    def __init__(self, codigo, clave, carrera, ciclo):
-        self.sesion: DatosSesion = obtener_sesion(codigo, clave, carrera, ciclo)
+    def __init__(self, codigo='', clave='', carrera='', ciclo='', sesion=None):
+        if sesion is None:
+            self.sesion: DatosSesion = obtener_sesion(codigo, clave, carrera, ciclo)
+        else:
+            self.sesion: DatosSesion = sesion
 
     def horario(self) -> DatosHorarioSiiau:
         cookies, pidm_p, ciclo, carrera = self.sesion

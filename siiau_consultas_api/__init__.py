@@ -1,4 +1,4 @@
-from .consulta_cli import main
+from .consulta_cli import estatus_siiau
 
 __version__ = '0.0.1'
 

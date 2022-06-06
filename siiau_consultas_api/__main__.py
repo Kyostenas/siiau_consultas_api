@@ -1,4 +1,4 @@
-from . import main
+from . import estatus_siiau
 
 
 # if __name__ == '__main__':

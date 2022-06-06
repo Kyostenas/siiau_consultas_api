@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .utiles import es_alguna_instancia
+from .utiles import es_alguna_instancia, tam_consola
 
 from textwrap import wrap
 from tabulate import  tabulate
@@ -144,7 +144,9 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         numalign='left')
 
 
-def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], espacio_total: int):
+def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], 
+                               espacio_total: int=tam_consola()['cols'], 
+                               estilo: str = 'fancy_grid'):
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     if isinstance(datos, list):
         filas_tabla = datos
@@ -156,27 +158,31 @@ def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], espacio_total: in
         valores = list(map(lambda x: x, valores))
         filas_tabla = list(zip(llaves, valores))
         filas_tabla = list(map(list, filas_tabla))
-    encabezados = ['CAMPO', 'VALOR']
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
-    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='fancy_grid')
+    tabla = tabulate(tabular_data=filas_tabla, tablefmt=estilo)
     
     return tabla
 
 
-def tabla_generica(encabezados:Union[NamedTuple, List], 
-                   datos: Union[
+def tabla_generica(datos: Union[
                        Tuple[Union[Tuple, List]], 
                        List[Union[NamedTuple, List]]
                     ],
-                   espacio_total: int):
+                   encabezados:Union[NamedTuple, List] = None,
+                   espacio_total: int=tam_consola()['cols'],
+                   estilo='fancy_grid'):
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     filas_tabla = datos
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
-    tabla = tabulate(tabular_data=filas_tabla, headers=encabezados, tablefmt='fancy_grid')
+    tabla = tabulate(
+        tabular_data=filas_tabla, 
+        headers=encabezados, 
+        tablefmt=estilo
+    )
     
     return tabla
 
