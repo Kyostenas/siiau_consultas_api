@@ -83,6 +83,7 @@ LIMPIAR = '\r'
 TECLAS = Teclas()
 seesion = None
 CICLO_GENERICO = 200010
+SELECCION_USUARIO_DEFECTO = 0
 
 # (o-------------------------- TRANSFERENCIA INTERNA --------------------------o)
 info_ejecucion = {}
@@ -122,6 +123,8 @@ DCARP_CACHE = f'{DCARP_RAIZ}{NCAPR_CACHE}{SEP}'
 DCARPUS_CARRERAS = lambda usuario: f'{DCARP_USUARIOS}{usuario}{SEP}{NCARPUS_CARRERAS}{SEP}'
 DCARPUS_SEMESTRES = lambda usuario: f'{DCARP_USUARIOS}{usuario}{SEP}{NCARPUS_SEMESTRES}{SEP}'
 DCARPUS_OFERTA = lambda usuario: f'{DCARP_USUARIOS}{usuario}{SEP}{NCARPUS_OFERTA}{SEP}'
+
+DIR_PARAMETROS = f'{DCARP_RAIZ}parametros.json'
 # (o-------------------------------------o-------------------------------------o)
 
 
@@ -237,15 +240,12 @@ def revisar_archivos_inicio() -> list:
     """
     Retorna::
     
-        (sin_extension, arhivos_usuarios)
+        arhivos_usuario: list
         
-    El primero contiene solo los codigos de los usuarios registrados.
-    
-    El segundo el nombre de los archivos completos.
+    El nombre de los archivos de usuario.
     """
     archivos_usuarios = os.listdir(DCARP_USUARIOS)
-    sin_extension = map(lambda x: x.split('.')[0], archivos_usuarios)
-    return list(sin_extension), archivos_usuarios
+    return archivos_usuarios
                 
                 
 def leer_usuario(archivo_usuario: str) -> dict:
@@ -378,17 +378,23 @@ def mostrar_datos_de_sesion(archivo_usuario: str):
         f'\n\tCarreras: {refs_carreras}'
     )
     
+
+def revisar_archivo_parametros() -> None:
+    try:
+        leer_json(DIR_PARAMETROS)
+    except FileNotFoundError:
+        escribir_json(
+            datos={
+                'usuario_seleccionado': None,
+            },
+            dir_archivo=DIR_PARAMETROS
+        )
     
-def revisar_archivos(ver_directorios=True) -> dict:
-    """
-    Retorna::
     
-        {'usuarios': list, 'archivos_usuarios': list}
-    """
-    if ver_directorios:
-        revisar_directorios()
-    usuarios, archivos_usuarios = revisar_archivos_inicio()
-    return {'usuarios': usuarios, 'archivos_usuarios': archivos_usuarios}
+def revisar_archivos() -> dict:
+    # El orden de estos dos importa
+    revisar_directorios()
+    revisar_archivo_parametros()
 
 
 def mostrar_horario(compacto: str, 
@@ -416,6 +422,57 @@ def mostrar_horario(compacto: str,
     
     imprimir(tabla)
 
+
+def mostrar_usuarios_registrados(archivos_usuarios):
+    usuarios_obtenidos = []
+    encabezados = ['USUARIO', 'NOMBRE']
+    for archivo_usuario in archivos_usuarios:
+        datos_usuario = leer_usuario(archivo_usuario)
+        usuarios_obtenidos.append(
+            [datos_usuario['usuario'], datos_usuario['nombre']]
+        )
+    tabla = tabla_generica(
+        datos=usuarios_obtenidos,
+        encabezados=encabezados,
+        estilo='pwrshll_alike',
+        mostrar_indice=True,
+        inicio_indice=1
+    )
+
+    imprimir(tabla)
+    
+
+def evaluar_opciones_estatus_siiau(estatus,
+                                   mostrar_todo,
+                                   mostrar_usuarios,
+                                   archivos_usuarios):
+    parametros = leer_json(DIR_PARAMETROS)
+    i_usuario_sel = parametros['usuario_seleccionado']
+    archivo_usuario = archivos_usuarios[i_usuario_sel]
+    if estatus or mostrar_todo:
+        mostrar_estatus(archivo_usuario, mostrar_todo)
+    elif mostrar_usuarios:
+        mostrar_usuarios_registrados(archivos_usuarios)
+    else:
+        mostrar_datos_de_sesion(archivo_usuario)
+        
+
+def revisar_si_existe_usuario():
+    parametros = leer_json(DIR_PARAMETROS)
+    usuario_seleccionado = parametros['usuario_seleccionado']
+    if usuario_seleccionado is None:
+        imprimir(log(error('No hay usuario seleccionado.'), TRAZO))
+        imprimir(log('Utilize "siiau -nu" para agregar un usuario.', TRAZO))
+        exit()
+        
+        
+def nuevo_usuario_siiau():
+    agregar_datos_de_inicio()
+    parametros = leer_json(DIR_PARAMETROS)
+    usuario_seleccionado = parametros['usuario_seleccionado']
+    if usuario_seleccionado is None:
+        parametros['usuario_seleccionado'] = SELECCION_USUARIO_DEFECTO
+        escribir_json(parametros, DIR_PARAMETROS)
 
 
 
@@ -473,25 +530,21 @@ def estatus_siiau(estatus,
     """
     Muestra y modofica la informacion actual sobre la sesion de siiau.
     """
-    datos_inicio = revisar_archivos()
-    usuarios = datos_inicio['usuarios']
-    archivos_usuarios = datos_inicio['archivos_usuarios']
-    if len(usuarios) == 0:
-        agregar_datos_de_inicio()
-        datos_inicio = revisar_archivos()
-        archivos_usuarios = datos_inicio['archivos_usuarios']
-        if estatus or mostrar_todo:
-            mostrar_estatus(archivos_usuarios[0], mostrar_todo)
-        else:
-            archivos_usuarios = datos_inicio['archivos_usuarios']
-            mostrar_datos_de_sesion(archivos_usuarios[0])
-    elif len(usuarios) == 1:
-        if estatus or mostrar_todo:
-            mostrar_estatus(archivos_usuarios[0], mostrar_todo)
-        else:
-            mostrar_datos_de_sesion(archivos_usuarios[0])
+    revisar_archivos()
+    if not nuevo_usuario:
+        revisar_si_existe_usuario()
     else:
-        pass
+        # Este es un caso especial y no se incluye en
+        # "evaluar_opciones_estatus_siiau"
+        nuevo_usuario_siiau()
+    archivos_usuarios = revisar_archivos_inicio()
+    evaluar_opciones_estatus_siiau(
+        estatus,
+        mostrar_todo,
+        mostrar_usuarios,
+        archivos_usuarios,
+    )
+  
     
     
 @click.command()
