@@ -34,7 +34,7 @@ from .servicio_consulta_siiau import (
     Alumno, 
     centros, 
     carreras, 
-    clases,
+    clases
 )
 from .colores import (
     titulo, 
@@ -82,6 +82,7 @@ TRAZO = 'siiaucli'
 LIMPIAR = '\r'
 TECLAS = Teclas()
 seesion = None
+CICLO_GENERICO = 200010
 
 # (o-------------------------- TRANSFERENCIA INTERNA --------------------------o)
 info_ejecucion = {}
@@ -286,8 +287,10 @@ def revisar_sesion(datos_usuario: dict,
         carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
         carrera: CarreraEstudiante = carreras[-1]
         carrera = carrera.ref_carrera
-        ciclo = _obtener_dato('Ciclo')
-        sesion = obtener_sesion(usuario, contra, carrera, ciclo)
+        ciclo_mas_grande = max(tuple(map(
+            lambda carrera: carrera.ref_ciclo_final, carreras
+        )))
+        sesion = obtener_sesion(usuario, contra, carrera, ciclo_mas_grande)
         escribir_archivo_dat(
             f'{DCARP_CACHE}_temp__{usuario}.dat',
             sesion=sesion.sesion
@@ -317,24 +320,32 @@ def obtener_sesion(usuario='', clave='', carrera='', ciclo='', sesion_guardada=N
 
 
 def agregar_datos_de_inicio():
-    usuario = _obtener_dato_secreto('Usuario (ID estudiante)')
+    usuario = _obtener_dato('Usuario (ID estudiante)')
     contra = _obtener_dato_secreto('Clave de SIIAU')
     sesion = obtener_sesion(usuario, contra)
     try:
         carreras = sesion.carreras()
+        sesion_para_nombre = obtener_sesion(
+            usuario=usuario, 
+            clave=contra, 
+            carrera=carreras[-1].ref_carrera,
+        )
+        datos_est = sesion_para_nombre.horario().datos_estudiante
+        nombre_est = datos_est.nombre.title()
         escribir_archivo_dat(
             f'{DCARP_USUARIOS}{usuario}.dat',
             usuario=usuario,
             contra=contra,
-            carreras=carreras
+            carreras=carreras,
+            nombre=nombre_est
         )
-    except IndexError:
+    except (IndexError, ValueError):
         imprimir(log(error('Datos incorrectos'), TRAZO))
         exit()
         
 
-def mostrar_estatus(archivos_usuarios: str):
-    datos_usuario = leer_usuario(archivos_usuarios[0])
+def mostrar_estatus(arhivo_usuario: str):
+    datos_usuario = leer_usuario(arhivo_usuario)
     sesion_revisada = revisar_sesion(datos_usuario)
     datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
     tabla_datos = tabla_dos_columnas_valores(
@@ -344,7 +355,21 @@ def mostrar_estatus(archivos_usuarios: str):
     imprimir(tabla_datos)
     
     
-def revisar_archivos(ver_directorios=True):
+def mostrar_datos_de_sesion(archivo_usuario: str):
+    datos_usuarios = leer_usuario(archivo_usuario)
+    imprimir(
+        'Sesion iniciada como:'
+        f'\n\tUsuario: {datos_usuarios["usuario"]}'
+        f'\n\tNombre: {datos_usuarios["nombre"]}'
+    )
+    
+    
+def revisar_archivos(ver_directorios=True) -> dict:
+    """
+    Retorna::
+    
+        {'usuarios': list, 'archivos_usuarios': list}
+    """
     if ver_directorios:
         revisar_directorios()
     usuarios, archivos_usuarios = revisar_archivos_inicio()
@@ -379,22 +404,81 @@ def mostrar_horario(compacto: str,
 
 
 
+# +--------------------------------------------------------------------------+
+# |                               Comandos                                   |
+# +--------------------------------------------------------------------------+
+
 @click.command()
-def estatus_siiau():
+@click.option(
+    '--estatus',
+    '-e',
+    is_flag=True,
+    default=False,
+    help='Muestra el estatus de la ultima carrera.'
+)
+@click.option(
+    '--mostrar-todo',
+    '-t',
+    is_flag=True,
+    default=False,
+    help='Mostrar estatus de todas las carreras.'
+)
+@click.option(
+    '--mostrar-usuarios',
+    '-mu',
+    is_flag=True,
+    default=False,
+    help='Mostrar los usuarios registrados.'
+)
+@click.option(
+    '--nuevo-usuario',
+    '-nu',
+    is_flag=True,
+    default=False,
+    help='Agregar un nuevo usuario.'
+)
+@click.option(
+    '--sel-usuario',
+    '-u',
+    type=(int),
+    help='Selecciona el usuario.'
+)
+@click.option(
+    '--carrera',
+    '-c',
+    type=(str),
+    help='Especifica la carrera a revisar.'
+)
+def estatus_siiau(estatus, 
+                  mostrar_todo, 
+                  mostrar_usuarios, 
+                  nuevo_usuario, 
+                  carrera, 
+                  sel_usuario):
     """
-    Revisa tu estatus actual como estudiante de la UDG.
-    Comprueba si existe una sesion abierta.
+    Muestra y modofica la informacion actual sobre la sesion de siiau.
     """
     datos_inicio = revisar_archivos()
     usuarios = datos_inicio['usuarios']
+    archivos_usuarios = datos_inicio['archivos_usuarios']
     if len(usuarios) == 0:
         agregar_datos_de_inicio()
         datos_inicio = revisar_archivos()
         archivos_usuarios = datos_inicio['archivos_usuarios']
-        mostrar_estatus(archivos_usuarios)
+        if mostrar_todo:
+            pass
+        elif estatus:
+            mostrar_estatus(archivos_usuarios[0])
+        else:
+            archivos_usuarios = datos_inicio['archivos_usuarios']
+            mostrar_datos_de_sesion(archivos_usuarios[0])
     elif len(usuarios) == 1:
-        archivos_usuarios = datos_inicio['archivos_usuarios']
-        mostrar_estatus(archivos_usuarios)
+        if mostrar_todo:
+            pass
+        elif estatus:
+            mostrar_estatus(archivos_usuarios[0])
+        else:
+            mostrar_datos_de_sesion(archivos_usuarios[0])
     else:
         pass
     
