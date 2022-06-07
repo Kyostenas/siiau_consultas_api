@@ -285,12 +285,14 @@ def revisar_sesion(datos_usuario: dict,
     except FileNotFoundError:
         contra = datos_usuario['contra']
         carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
-        carrera: CarreraEstudiante = carreras[-1]
-        carrera = carrera.ref_carrera
-        ciclo_mas_grande = max(tuple(map(
-            lambda carrera: carrera.ref_ciclo_final, carreras
-        )))
-        sesion = obtener_sesion(usuario, contra, carrera, ciclo_mas_grande)
+        ciclo_mas_grande = 0
+        ultima_carrera = ''
+        for carrera in carreras:
+            ciclo_a_revisar = carrera.ref_ciclo_final
+            if ciclo_a_revisar > ciclo_mas_grande:
+                ciclo_mas_grande = ciclo_a_revisar
+                ultima_carrera = carrera.ref_carrera
+        sesion = obtener_sesion(usuario, contra, ultima_carrera, ciclo_mas_grande)
         escribir_archivo_dat(
             f'{DCARP_CACHE}_temp__{usuario}.dat',
             sesion=sesion.sesion
