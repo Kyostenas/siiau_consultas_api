@@ -176,7 +176,10 @@ def tabla_generica(datos: Union[
                     ],
                    encabezados:Union[NamedTuple, List] = None,
                    espacio_total: int=tam_consola()['cols'],
-                   estilo='fancy_grid'):
+                   estilo='fancy_grid',
+                   mostrar_indice: bool=False,
+                   inicio_indice: int=0,
+                   paso_indice: int=1,):
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     filas_tabla = datos
     for i_fila, fila in enumerate(filas_tabla):
@@ -187,6 +190,9 @@ def tabla_generica(datos: Union[
         headers=encabezados, 
         style_name=estilo
     )
+    tabla.show_index = mostrar_indice
+    tabla.index_start = inicio_indice
+    tabla.index_step = paso_indice
     
     return tabla
 
