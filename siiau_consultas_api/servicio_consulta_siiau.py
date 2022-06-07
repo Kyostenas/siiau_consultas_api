@@ -186,7 +186,10 @@ def horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorario
     campos_tabla_datos_estudiante = ((encabezado, str) for encabezado in encabezados_datos_estudiantes)
     tabla_dat_es_clase = NamedTuple('DatosEstudiante', campos_tabla_datos_estudiante)
     tabla_datos_estudiantes_completa = tabla_dat_es_clase(*tabla_datos_estudiantes)
-    tabla_horario_completa = HorarioCompletoSiiau(*tabla_horario_corregida)
+    try:
+        tabla_horario_completa = HorarioCompletoSiiau(*tabla_horario_corregida)
+    except TypeError:
+        tabla_horario_completa = ()
     datos_horarios_siiau = DatosHorarioSiiau(tabla_datos_estudiantes_completa, tabla_horario_completa)
 
     return datos_horarios_siiau
@@ -226,6 +229,25 @@ def __obtener_multicarrera(pidm_p, cookies) -> list:
     return carreras_opciones
 
 
+def __obtener_ultimo_ciclo_de_carrera(pidm_p, cookies, ciclo, carrera) -> str:
+    """
+    Retorna::
+    
+        {'ultimo_ciclo': str, 'ultimo_ciclo_entero': str}
+    """
+    datos_horario: DatosHorarioSiiau = horario(
+        pidm_p=pidm_p,
+        ciclo=ciclo,
+        carrera=carrera,
+        cookies=cookies
+    )
+    datos_carrera = datos_horario.datos_estudiante
+    ultimo_ciclo = datos_carrera.ltimociclo
+    ultimo_ciclo_entero = convertir_ciclo_a_entero(ultimo_ciclo)
+    
+    return {'ultimo_ciclo': ultimo_ciclo, 'ultimo_ciclo_entero': ultimo_ciclo_entero}
+    
+    
 def __obtener_una_carrera(pidm_p, cookies) -> CarreraEstudiante:
     url_carrera_individual = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/SGPPROC.DOBLE_CARRERA'])
     paylad = dict(
@@ -253,10 +275,20 @@ def __obtener_una_carrera(pidm_p, cookies) -> CarreraEstudiante:
             datos_filtrados['ref_carrera'] = etiqueta_html.attrs['value']
         if etiqueta_html.attrs['name'] == 'cicloaP':
             datos_filtrados['ciclo_admision'] = etiqueta_html.attrs['value']
+    datos_ultimo_ciclo = __obtener_ultimo_ciclo_de_carrera(
+        pidm_p=pidm_p,
+        cookies=cookies,
+        ciclo=datos_filtrados['ciclo_admision'],
+        carrera=datos_filtrados['ref_carrera']
+    )
+    ciclo_final = datos_ultimo_ciclo['ultimo_ciclo']
+    ref_ciclo_final = datos_ultimo_ciclo['ultimo_ciclo_entero']
     carrera_formateada = CarreraEstudiante(
         ref_carrera=datos_filtrados['ref_carrera'],
         ciclo_inicio='',
-        ref_ciclo=datos_filtrados['ciclo_admision']
+        ref_ciclo_inicio=datos_filtrados['ciclo_admision'],
+        ciclo_final=ciclo_final,
+        ref_ciclo_final=ref_ciclo_final
     )
     return carrera_formateada
 
@@ -268,14 +300,28 @@ def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
         carreras = carreras_opciones[0].split('\n')
         carreras.remove('')
         carreras_separadas = list(map(lambda x: x.split('-'), carreras))
-        carreras_formateadas = tuple(map(lambda x: CarreraEstudiante(
-                x[I_REF_CARRERA_ESTUDIANTE],
-                ''.join(x[RANGO_CICLO_IN_CARR_ES]),
-                convertir_ciclo_a_entero(''.join(x[RANGO_CICLO_IN_CARR_ES]))
-            ),
-            carreras_separadas
-        ))
-
+        carreras_formateadas = []
+        for carrera in carreras_separadas:
+            ref_carrera = carrera[I_REF_CARRERA_ESTUDIANTE]
+            ref_ciclo_inicio = convertir_ciclo_a_entero(
+                ''.join(carrera[RANGO_CICLO_IN_CARR_ES])
+            )
+            datos_ultimo_ciclo = __obtener_ultimo_ciclo_de_carrera(
+                pidm_p=pidm_p,
+                cookies=cookies,
+                ciclo=ref_ciclo_inicio,
+                carrera=ref_carrera
+            )
+            ciclo_final = datos_ultimo_ciclo['ultimo_ciclo']
+            ref_ciclo_final = datos_ultimo_ciclo['ultimo_ciclo_entero']
+            carrera_formateada = CarreraEstudiante(
+                ref_carrera=ref_carrera,
+                ciclo_inicio=''.join(carrera[RANGO_CICLO_IN_CARR_ES]),
+                ref_ciclo_inicio=ref_ciclo_inicio,
+                ciclo_final=ciclo_final,
+                ref_ciclo_final=ref_ciclo_final
+            )
+            carreras_formateadas.append(carrera_formateada)
         return carreras_formateadas
     else:
         una_carrera = tuple([__obtener_una_carrera(pidm_p, cookies)])
