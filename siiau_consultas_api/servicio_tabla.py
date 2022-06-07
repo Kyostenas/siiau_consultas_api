@@ -18,7 +18,7 @@
 from .utiles import es_alguna_instancia, tam_consola
 
 from textwrap import wrap
-from tabulate import  tabulate
+from prettyTables import Table
 from typing import NamedTuple, Union, List, Tuple
 from os import get_terminal_size
 
@@ -87,9 +87,12 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                                         i_parte += 1
                                 except IndexError:
                                     i_parte += 1
-                            subtabla_informativa = tabulate(tabular_data=cuerpo_sub_tabla_informativa,
-                                                            tablefmt='presto')
-                            partes.append(subtabla_informativa)
+                            subtabla_informativa = Table(
+                                rows=cuerpo_sub_tabla_informativa,
+                                style_name='presto'
+                            )
+                            subtabla_informativa.show_headers = False
+                            partes.append(str(subtabla_informativa))
                         nuevo_elemento = '\n'.join(partes)
                     else:
                         nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_COL))
@@ -107,10 +110,10 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                     nueva_fila.append(col)
                 nueva_fila = tuple(nueva_fila)
             cuerpo.append(nueva_fila)
-        return tabulate(headers=encabezados,
-                        tabular_data=cuerpo,
-                        tablefmt='grid',
-                        numalign='left')
+        return Table(
+            headers=list(encabezados),
+            rows=cuerpo,
+            style_name='grid')
     elif es_alguna_instancia(tupla, tuple, list) and not tupla_es_named_tuple:
         encabezados = tuple(map(lambda x: ' '.join(x.upper().split('_')), tupla[0]._asdict().keys()))
         cuerpo = []
@@ -127,10 +130,10 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                     nueva_fila.append('\n'.join([*wrap(str(col), 15)]))
             cuerpo.append(nueva_fila)
         formato = 'grid' if not subtabla else 'simple'
-        return tabulate(tabular_data=cuerpo,
-                        headers=encabezados,
-                        tablefmt=formato,
-                        numalign='left')
+        return Table(
+            tabular_data=cuerpo,
+            headers=encabezados,
+            style_name=formato)
     elif subtabla and tupla_es_named_tuple:
         encabezados = tuple(map(lambda x: x.upper(), tupla._asdict().keys()))
         cuerpo = []
@@ -138,15 +141,15 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
             if isinstance(col, bool):
                 col = 'si' if col else ''
             cuerpo.append(col)
-        return tabulate(tabular_data=[cuerpo],
-                        headers=encabezados,
-                        tablefmt='plain',
-                        numalign='left')
+        return Table(
+            tabular_data=[cuerpo],
+            headers=encabezados,
+            tablefmt='plain')
 
 
 def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], 
                                espacio_total: int=tam_consola()['cols'], 
-                               estilo: str = 'fancy_grid'):
+                               estilo: str = 'pretty_grid'):
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     if isinstance(datos, list):
         filas_tabla = datos
@@ -161,7 +164,8 @@ def tabla_dos_columnas_valores(datos: Union[NamedTuple, List],
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
-    tabla = tabulate(tabular_data=filas_tabla, tablefmt=estilo)
+    tabla = Table(rows=filas_tabla, style_name=estilo)
+    tabla.show_headers = False
     
     return tabla
 
@@ -178,10 +182,10 @@ def tabla_generica(datos: Union[
     for i_fila, fila in enumerate(filas_tabla):
         for i_col, col in enumerate(fila):
             filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
-    tabla = tabulate(
-        tabular_data=filas_tabla, 
+    tabla = Table(
+        rows=filas_tabla, 
         headers=encabezados, 
-        tablefmt=estilo
+        style_name=estilo
     )
     
     return tabla

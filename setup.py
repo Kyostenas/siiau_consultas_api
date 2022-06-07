@@ -27,7 +27,7 @@ setup(
     'Unidecode==1.3.4',
     'xlwt==1.3.0',
     'beautifulsoup4==4.10.0',
-    'tabulate==0.8.9',
+    'PrettyTables==1.1.3',
     'alive-progress==2.3.1',
     'colorama==0.4.4'
   ],
