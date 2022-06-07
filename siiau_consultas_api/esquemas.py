@@ -122,7 +122,9 @@ class DatosHorarioSiiau(NamedTuple):
 class CarreraEstudiante(NamedTuple):
     ref_carrera: str
     ciclo_inicio: str
-    ref_ciclo: int
+    ref_ciclo_inicio: int
+    ciclo_final: str
+    ref_ciclo_final: int
 
 
 class DiaClase(NamedTuple):
