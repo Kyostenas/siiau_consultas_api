@@ -346,23 +346,36 @@ def agregar_datos_de_inicio():
         exit()
         
 
-def mostrar_estatus(arhivo_usuario: str):
+def mostrar_estatus(arhivo_usuario: str, mostrar_todo):
     datos_usuario = leer_usuario(arhivo_usuario)
-    sesion_revisada = revisar_sesion(datos_usuario)
-    datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
-    tabla_datos = tabla_dos_columnas_valores(
-        datos=datos_horario.datos_estudiante,
-        estilo='plain'
-    )
-    imprimir(tabla_datos)
+    if mostrar_todo:
+        carreras = tuple(map(
+            lambda carr: carr.ref_carrera, datos_usuario['carreras']
+        ))
+    else:
+        carreras = [None]
+    for carrera in carreras:
+        sesion_revisada = revisar_sesion(
+            datos_usuario=datos_usuario,
+            carrera_seleccion=carrera
+        )
+        datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
+        tabla_datos = tabla_dos_columnas_valores(
+            datos=datos_horario.datos_estudiante,
+            estilo='grid_eheader'
+        )
+        imprimir(tabla_datos)
     
     
 def mostrar_datos_de_sesion(archivo_usuario: str):
     datos_usuarios = leer_usuario(archivo_usuario)
+    carreras = datos_usuarios['carreras']
+    refs_carreras = ', '.join(map(lambda carr: carr.ref_carrera, carreras))
     imprimir(
         'Sesion iniciada como:'
         f'\n\tUsuario: {datos_usuarios["usuario"]}'
         f'\n\tNombre: {datos_usuarios["nombre"]}'
+        f'\n\tCarreras: {refs_carreras}'
     )
     
     
@@ -467,18 +480,14 @@ def estatus_siiau(estatus,
         agregar_datos_de_inicio()
         datos_inicio = revisar_archivos()
         archivos_usuarios = datos_inicio['archivos_usuarios']
-        if mostrar_todo:
-            pass
-        elif estatus:
-            mostrar_estatus(archivos_usuarios[0])
+        if estatus or mostrar_todo:
+            mostrar_estatus(archivos_usuarios[0], mostrar_todo)
         else:
             archivos_usuarios = datos_inicio['archivos_usuarios']
             mostrar_datos_de_sesion(archivos_usuarios[0])
     elif len(usuarios) == 1:
-        if mostrar_todo:
-            pass
-        elif estatus:
-            mostrar_estatus(archivos_usuarios[0])
+        if estatus or mostrar_todo:
+            mostrar_estatus(archivos_usuarios[0], mostrar_todo)
         else:
             mostrar_datos_de_sesion(archivos_usuarios[0])
     else:
