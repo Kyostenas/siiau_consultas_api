@@ -353,26 +353,33 @@ def agregar_datos_de_inicio():
         exit()
         
 
-def mostrar_estatus(arhivo_usuario: str, mostrar_todo):
+def mostrar_estatus(arhivo_usuario: str, mostrar_todo: bool, carrera_sel: str):
     datos_usuario = leer_usuario(arhivo_usuario)
     if mostrar_todo:
         carreras = tuple(map(
             lambda carr: carr.ref_carrera, datos_usuario['carreras']
         ))
     else:
-        carreras = [None]
+        if carrera_sel is not None:
+            carreras = [carrera_sel]
+        else:
+            carreras = [None]
     for carrera in carreras:
-        sesion_revisada = revisar_sesion(
-            datos_usuario=datos_usuario,
-            carrera_seleccion=carrera
-        )
-        datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
-        tabla_datos = tabla_dos_columnas_valores(
-            datos=datos_horario.datos_estudiante,
-            estilo='grid_eheader'
-        )
-        imprimir(tabla_datos)
-    
+        try:
+            sesion_revisada = revisar_sesion(
+                datos_usuario=datos_usuario,
+                carrera_seleccion=carrera
+            )
+            datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
+            tabla_datos = tabla_dos_columnas_valores(
+                datos=datos_horario.datos_estudiante,
+                estilo='grid_eheader'
+            )
+            imprimir(tabla_datos)
+        except ValueError:
+            imprimir(log(error('Carrera no encontrada.'), TRAZO))
+            exit()
+        
     
 def mostrar_datos_de_sesion(archivo_usuario: str):
     datos_usuarios = leer_usuario(archivo_usuario)
@@ -463,6 +470,8 @@ def cambiar_seleccion_usuario(archivos_usuarios, i_usuario_sel):
             nuevo_indice = _obtener_dato('Ingrese su numero')
             try:
                 nuevo_indice = int(nuevo_indice) - 1
+                if nuevo_indice < 0:
+                    continue
             except ValueError:
                 continue
             break
@@ -480,11 +489,12 @@ def evaluar_opciones_estatus_siiau(estatus,
                                    mostrar_todo,
                                    mostrar_usuarios,
                                    sel_usuario,
+                                   carrera,
                                    archivos_usuarios):
     i_usuario_sel = _obtener_indice_usuario_seleccionado()
     archivo_usuario = archivos_usuarios[i_usuario_sel]
     if estatus or mostrar_todo:
-        mostrar_estatus(archivo_usuario, mostrar_todo)
+        mostrar_estatus(archivo_usuario, mostrar_todo, carrera)
     elif mostrar_usuarios:
         mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel)
     elif sel_usuario:
@@ -583,6 +593,7 @@ def estatus_siiau(estatus,
         mostrar_todo,
         mostrar_usuarios,
         sel_usuario,
+        carrera,
         archivos_usuarios,
     )
   
