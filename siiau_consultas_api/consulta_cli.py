@@ -234,6 +234,12 @@ def _obtener_dato_secreto(mensaje: str) -> str:
 
 def _obtener_dato(mensaje: str) -> str:
     return input(f'{mensaje}: ')
+
+
+def _obtener_indice_usuario_seleccionado() -> int:
+    parametros = leer_json(DIR_PARAMETROS)
+    i_usuario_seleccionado = parametros['usuario_seleccionado']
+    return i_usuario_seleccionado
          
                 
 def revisar_archivos_inicio() -> list:
@@ -341,8 +347,9 @@ def agregar_datos_de_inicio():
             carreras=carreras,
             nombre=nombre_est
         )
-    except (IndexError, ValueError):
-        imprimir(log(error('Datos incorrectos'), TRAZO))
+    except (IndexError, ValueError, KeyError):
+        imprimir(log(error('No se pudo iniciar sesion. Revise los datos'), TRAZO))
+        imprimir(log(error('ingresados o su conexion a internet.'), TRAZO))
         exit()
         
 
@@ -423,36 +430,65 @@ def mostrar_horario(compacto: str,
     imprimir(tabla)
 
 
-def mostrar_usuarios_registrados(archivos_usuarios):
+def mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel):
+    i_usuario_sel = _obtener_indice_usuario_seleccionado()
     usuarios_obtenidos = []
-    encabezados = ['USUARIO', 'NOMBRE']
-    for archivo_usuario in archivos_usuarios:
+    encabezados = ['USUARIO', 'NOMBRE', 'ACTIVO']
+    for i_usuario, archivo_usuario in enumerate(archivos_usuarios):
         datos_usuario = leer_usuario(archivo_usuario)
+        if i_usuario_sel == i_usuario:
+            usuario_sel = '<-----'
+        else:
+            usuario_sel = ''
         usuarios_obtenidos.append(
-            [datos_usuario['usuario'], datos_usuario['nombre']]
+            [datos_usuario['usuario'], datos_usuario['nombre'], usuario_sel]
         )
     tabla = tabla_generica(
         datos=usuarios_obtenidos,
         encabezados=encabezados,
-        estilo='pwrshll_alike',
+        estilo='simple_head',
         mostrar_indice=True,
         inicio_indice=1
     )
 
     imprimir(tabla)
     
+    
+def cambiar_seleccion_usuario(archivos_usuarios, i_usuario_sel):
+    mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel)
+    imprimir(f'\nSeleccione uno de los {len(archivos_usuarios)} usuarios.')
+    nuevo_indice = 0
+    while True:
+        while True:
+            nuevo_indice = _obtener_dato('Ingrese su numero')
+            try:
+                nuevo_indice = int(nuevo_indice) - 1
+            except ValueError:
+                continue
+            break
+        try:
+            archivos_usuarios[nuevo_indice]
+        except IndexError:
+            continue
+        break
+    parametros = leer_json(DIR_PARAMETROS)
+    parametros['usuario_seleccionado'] = nuevo_indice
+    escribir_json(parametros, DIR_PARAMETROS)
+    
 
 def evaluar_opciones_estatus_siiau(estatus,
                                    mostrar_todo,
                                    mostrar_usuarios,
+                                   sel_usuario,
                                    archivos_usuarios):
-    parametros = leer_json(DIR_PARAMETROS)
-    i_usuario_sel = parametros['usuario_seleccionado']
+    i_usuario_sel = _obtener_indice_usuario_seleccionado()
     archivo_usuario = archivos_usuarios[i_usuario_sel]
     if estatus or mostrar_todo:
         mostrar_estatus(archivo_usuario, mostrar_todo)
     elif mostrar_usuarios:
-        mostrar_usuarios_registrados(archivos_usuarios)
+        mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel)
+    elif sel_usuario:
+        cambiar_seleccion_usuario(archivos_usuarios, i_usuario_sel)
     else:
         mostrar_datos_de_sesion(archivo_usuario)
         
@@ -468,6 +504,9 @@ def revisar_si_existe_usuario():
         
 def nuevo_usuario_siiau():
     agregar_datos_de_inicio()
+    
+    # Aqui se obtienen los parametros completos (en lugar de usar las
+    # funciones para obtener sus valores) por si necesitan reescribir.
     parametros = leer_json(DIR_PARAMETROS)
     usuario_seleccionado = parametros['usuario_seleccionado']
     if usuario_seleccionado is None:
@@ -486,14 +525,14 @@ def nuevo_usuario_siiau():
     '-e',
     is_flag=True,
     default=False,
-    help='Muestra el estatus de la ultima carrera.'
+    help='Mostrar el estatus de la ultima carrera del usuario seleccionado.'
 )
 @click.option(
     '--mostrar-todo',
     '-t',
     is_flag=True,
     default=False,
-    help='Mostrar estatus de todas las carreras.'
+    help='Mostrar estatus de todas las carreras del usuario seleccionado.'
 )
 @click.option(
     '--mostrar-usuarios',
@@ -512,21 +551,22 @@ def nuevo_usuario_siiau():
 @click.option(
     '--sel-usuario',
     '-u',
-    type=(int),
-    help='Selecciona el usuario.'
+    is_flag=True,
+    default=False,
+    help='Seleccionar el usuario activo.'
 )
 @click.option(
     '--carrera',
     '-c',
     type=(str),
-    help='Especifica la carrera a revisar.'
+    help='Especificar la carrera a revisar.'
 )
 def estatus_siiau(estatus, 
                   mostrar_todo, 
                   mostrar_usuarios, 
-                  nuevo_usuario, 
-                  carrera, 
-                  sel_usuario):
+                  nuevo_usuario,
+                  sel_usuario,
+                  carrera):
     """
     Muestra y modofica la informacion actual sobre la sesion de siiau.
     """
@@ -542,6 +582,7 @@ def estatus_siiau(estatus,
         estatus,
         mostrar_todo,
         mostrar_usuarios,
+        sel_usuario,
         archivos_usuarios,
     )
   
