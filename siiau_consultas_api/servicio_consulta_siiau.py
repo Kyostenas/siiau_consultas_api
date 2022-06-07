@@ -40,7 +40,7 @@ from .esquemas import (
 import requests.exceptions
 from typing import NamedTuple, Tuple, List, Union
 from bs4 import BeautifulSoup as WebSp
-from requests import request, Session
+from requests import head, request, Session
 import re
 
 VACIO = '\xa0'
@@ -191,14 +191,16 @@ def horario(pidm_p: str, ciclo: str, carrera: str, cookies: str) -> DatosHorario
 
     return datos_horarios_siiau
 
-# FIX no siempre hay opciones con las carreras del estudiante
-def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
+
+def __obtener_multicarrera(pidm_p, cookies) -> list:
     url_carrera = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/gupmenug.menu'])
-    payload = dict(p_sistema_c='ALUMNOS',
-                   p_sistemaid_n='3',
-                   p_menupredid_n='3',
-                   p_pidm_n=pidm_p,
-                   p_majr_c=pidm_p)
+    payload = dict(
+        p_sistema_c='ALUMNOS',
+        p_sistemaid_n='3',
+        p_menupredid_n='3',
+        p_pidm_n=pidm_p,
+        p_majr_c=pidm_p
+    )
     accept = ['text / html, application / xhtml + xml, application / xml',
               'q = 0.9, image / avif, image / webp, image / apng, * / *',
               'q = 0.8, application / signed - exchange', 'v = b3', 'q = 0.9']
@@ -211,24 +213,73 @@ def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
                'Referer': f'{url_carrera}_sistema?p_pidm_n={pidm_p}',
                'Upgrade-Insecure-Requests': '1'}
     url_carrera = __join_payload_url(url_carrera, payload)
-    resp = request('GET',
-                   url=url_carrera,
-                   headers=headers,
-                   data=payload,
-                   allow_redirects=True)
+    resp = request(
+        'GET',
+        url=url_carrera,
+        headers=headers,
+        data=payload,
+        allow_redirects=True
+    )
     carreras_opciones = __websp_findall(resp, name='option')
     carreras_opciones = list(map(limpiar_html, carreras_opciones))
-    carreras = carreras_opciones[0].split('\n')
-    carreras.remove('')
-    carreras_separadas = list(map(lambda x: x.split('-'), carreras))
-    carreras_formateadas = tuple(
-        map(lambda x: CarreraEstudiante(x[I_REF_CARRERA_ESTUDIANTE],
-                                        ''.join(x[RANGO_CICLO_IN_CARR_ES]),
-                                        convertir_ciclo_a_entero(''.join(x[RANGO_CICLO_IN_CARR_ES]))),
-            carreras_separadas)
-    )
+    
+    return carreras_opciones
 
-    return carreras_formateadas
+
+def __obtener_una_carrera(pidm_p, cookies) -> CarreraEstudiante:
+    url_carrera_individual = ''.join([URL_SIIAU_ESTUDIANTE, '/wal/SGPPROC.DOBLE_CARRERA'])
+    paylad = dict(
+        pForma='SGPHIST.BOLETA_DC',
+        pParametroPidmAlumno='pidmp',
+        pPidmAlumno=pidm_p,
+        pParametroCarrera='majrP',
+        pParametroCicloAdmision='cicloaP'
+    )
+    headers = {
+        'Content-Type': 'text/html; charset=ISO-8859-1',
+        'Cookie': cookies
+    }
+    url_carrera_individual = __join_payload_url(url_carrera_individual, paylad)
+    resp = request(
+        'GET',
+        url=url_carrera_individual,
+        headers=headers,
+        data=paylad
+    )
+    datos_carrera = __websp_findall(resp, name='input')
+    datos_filtrados = {}
+    for etiqueta_html in datos_carrera:
+        if etiqueta_html.attrs['name'] == 'majrP':
+            datos_filtrados['ref_carrera'] = etiqueta_html.attrs['value']
+        if etiqueta_html.attrs['name'] == 'cicloaP':
+            datos_filtrados['ciclo_admision'] = etiqueta_html.attrs['value']
+    carrera_formateada = CarreraEstudiante(
+        ref_carrera=datos_filtrados['ref_carrera'],
+        ciclo_inicio='',
+        ref_ciclo=datos_filtrados['ciclo_admision']
+    )
+    return carrera_formateada
+
+
+# FIX no siempre hay opciones con las carreras del estudiante
+def carrera_s_estudiante(pidm_p, cookies) -> Tuple[CarreraEstudiante]:
+    carreras_opciones = __obtener_multicarrera(pidm_p, cookies)
+    if len(carreras_opciones) != 0:
+        carreras = carreras_opciones[0].split('\n')
+        carreras.remove('')
+        carreras_separadas = list(map(lambda x: x.split('-'), carreras))
+        carreras_formateadas = tuple(map(lambda x: CarreraEstudiante(
+                x[I_REF_CARRERA_ESTUDIANTE],
+                ''.join(x[RANGO_CICLO_IN_CARR_ES]),
+                convertir_ciclo_a_entero(''.join(x[RANGO_CICLO_IN_CARR_ES]))
+            ),
+            carreras_separadas
+        ))
+
+        return carreras_formateadas
+    else:
+        una_carrera = tuple([__obtener_una_carrera(pidm_p, cookies)])
+        return una_carrera
 
 
 def oferta_academica(centro, ciclo, clase, con_cupos=False):
