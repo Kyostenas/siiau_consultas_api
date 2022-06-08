@@ -32,7 +32,7 @@ setup(
     'colorama==0.4.4'
   ],
   classifiers=[
-    'License :: OSI Approved :: GPL',   
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',   
     'Programming Language :: Python :: 3',      
     'Programming Language :: Python :: 3.8',
     'Development Status :: 1 - Planning'
