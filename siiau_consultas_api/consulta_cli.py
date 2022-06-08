@@ -47,6 +47,7 @@ from .colores import (
     sub_titulo
 )
 from .utiles import (
+    convertir_ciclo_a_entero,
     leer_tecla,
     imprimir,
     leer_archivo_dat,
@@ -405,7 +406,7 @@ def revisar_archivo_parametros() -> None:
         )
     
     
-def revisar_archivos() -> dict:
+def revisar_archivos():
     # El orden de estos dos importa
     revisar_directorios()
     revisar_archivo_parametros()
@@ -421,18 +422,22 @@ def mostrar_horario(compacto: str,
         carrera_seleccion=carrera,
         ciclo_seleccion=ciclo
     )
-    datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
-    horario = datos_horario.horario
-    if compacto:
-        estructurado = estructurar_horario_por_clases(horario)
-        compactado = compactar_horario_por_clases(estructurado)
-        tabla = named_tuple_a_tabla(
-            compactado, 
-            por_columnas=True, 
-            horario_compacto=True
-        )
-    else:
-        tabla = named_tuple_a_tabla(horario, por_columnas=True)
+    try:
+        datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
+        horario = datos_horario.horario
+        if compacto:
+            estructurado = estructurar_horario_por_clases(horario)
+            compactado = compactar_horario_por_clases(estructurado)
+            tabla = named_tuple_a_tabla(
+                compactado, 
+                por_columnas=True, 
+                horario_compacto=True
+            )
+        else:
+            tabla = named_tuple_a_tabla(horario, por_columnas=True)
+    except IndexError:
+        imprimir(log(error('Horario no encontrado. Revise los datos.'), TRAZO))
+        exit()
     
     imprimir(tabla)
 
@@ -598,7 +603,6 @@ def estatus_siiau(estatus,
     )
   
     
-    
 @click.command()
 @click.option(
     '--compacto', 
@@ -628,15 +632,14 @@ def horario_siiau(compacto, carrera, ciclo):
     """
     Obten tu horario de siiau.
     """
-    datos_inicio = revisar_archivos()
-    usuarios = datos_inicio['usuarios']
-    if len(usuarios) == 0:
-        agregar_datos_de_inicio()
-        datos_inicio = revisar_archivos()
-        archivos_usuarios = datos_inicio['archivos_usuarios']
-        mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
-    elif len(usuarios) == 1:
-        archivos_usuarios = datos_inicio['archivos_usuarios']
-        mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
-    else:
-        pass
+    if not isinstance(ciclo, int) and ciclo is not None:
+        try:
+            ciclo = convertir_ciclo_a_entero(ciclo)
+        except (ValueError, TypeError):
+            imprimir(log(error('Ciclo invalido.'), TRAZO))
+            exit()
+    revisar_archivos()
+    revisar_si_existe_usuario()
+    archivos_usuarios = revisar_archivos_inicio()
+    mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
+
