@@ -345,7 +345,8 @@ def __soobreescribir_cli():
 def leer_tecla(retornar_original = False):
     # TODO probar compatibilidad con Windows
     ch = getch()
-    # print([ch])
+    if os.name == 'nt':
+        ch = ch.decode('latin1')
     if ch == ESC_CODE:
         otro_ch = getch()
         if otro_ch == '[':
