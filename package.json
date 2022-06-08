@@ -1,6 +1,6 @@
 {
   "name": "siiau_consultas_api",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Consulta información del SIIAU de la UDG",
   "main": " ",
   "scripts": {
