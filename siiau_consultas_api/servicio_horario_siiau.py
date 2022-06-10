@@ -33,7 +33,8 @@ VALOR_DE_MIEMBRO = 1
 SEP = '\\'
 SEP_DAT_MAT = '%'
 INDIC_DAT_MAT = '>'
-MATERIA_SIN_HORARIO = 'Sin Hora'
+SIN_HORA = 'S/H'
+SIN_FECHA = 'S/F'
 I_LUNES = 0
 I_MARTES = 1
 I_MIERCOES = 2
@@ -96,7 +97,11 @@ CLAVE_DIAS = {
 
 
 
-def __rango_horas_hhmm(inicio: int, fin: int, paso: int, correcion: int = CORRECCION_RANGO_HORAS):
+def __rango_horas_hhmm(inicio: int, 
+                       fin: int, 
+                       paso: int, 
+                       correcion: int = CORRECCION_RANGO_HORAS
+                      ):
     """
     Recibe inicio=1700, fin=1855, paso=100
     Retorna generador que crea: (('1700, '1755'), ('1800', '1855))
@@ -188,7 +193,7 @@ def __procesar_rango_horas(inicio: str, final: str):
     for horas_de_un_espacio in rango_horas_clase:
         horas_de_un_espacio_formateadas = __formatear_hora(horas_de_un_espacio)
         if horas_de_un_espacio_formateadas is None:
-            rango_horas_de_clase_formateadas.append(MATERIA_SIN_HORARIO)
+            rango_horas_de_clase_formateadas.append(SIN_HORA)
         else:
             rango_horas_de_clase_formateadas.append(horas_de_un_espacio_formateadas)
     rango_horas_de_clase_formateadas = tuple(rango_horas_de_clase_formateadas)
@@ -197,6 +202,7 @@ def __procesar_rango_horas(inicio: str, final: str):
 
 
 def __obtener_fecha_completa(fecha: str, separador: str):
+    try:
         # Fechas en horario siiau son: dd-mm-aa
         dia, mes, year = tuple(map(int, fecha.split(separador)))
         dia_semana = datetime.date(year, mes, dia).weekday()
@@ -205,8 +211,10 @@ def __obtener_fecha_completa(fecha: str, separador: str):
 
         # Ej. de frase: 'Sábado 1 de Enero, 2022'  (Happy new year!)
         frase = f'{nombre_dia} {dia} de {nombre_mes}, {year}'
+    except ValueError:
+        frase = SIN_FECHA
 
-        return frase
+    return frase
 
 
 def __procesar_un_dia(hora_inicio, 
@@ -238,6 +246,13 @@ def _procesar_dias_clase(datos_clase: dict,
     hora_formato_siiau = horario_por_columnas.horario[i_horario].split('-')
     hora_inicio = hora_formato_siiau[HORA_INICIO_MATERIAS]
     hora_final = hora_formato_siiau[HORA_FINAL_MATERIAS]
+    try:
+        int(hora_inicio)
+        int(hora_final)
+    except ValueError:
+        hora_final = 0 
+        hora_inicio = 0
+    
     if horario_por_columnas.L[i_horario]:
         datos_dia = __procesar_un_dia(
             hora_inicio=hora_inicio, 

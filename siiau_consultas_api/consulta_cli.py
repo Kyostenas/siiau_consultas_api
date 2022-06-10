@@ -461,7 +461,7 @@ def mostrar_horario(por_horas: str,
                         estilo_sel='presto'
                     )
                     encabezados_datos_clases = [
-                        'NRC', 'CLAVE', 'NOMBRE'
+                        'NRC', 'CLAVE', 'SEC', 'NOMBRE'
                     ]
                     datos_clases = []
                     for clase in estructurado:
@@ -469,6 +469,7 @@ def mostrar_horario(por_horas: str,
                         datos_clases.append([
                             clase.nrc, 
                             clase.clave_materia,
+                            clase.seccion,
                             clase.nombre,
                         ])
                     tabla_datos_clases = tabla_generica(
