@@ -46,18 +46,30 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         subtabla=False,
                         tam_col=0,
                         por_columnas=False,
-                        horario_compacto=False):
+                        estructura_por_horas=False,
+                        recortar_encabezados:int=None,
+                        estilo_sel:str='grid'):
     tam_terminal = get_terminal_size().columns
     tam_max_tabla = tam_terminal if not subtabla else tam_col
     tupla_es_named_tuple = hasattr(tupla, '_asdict')
     if por_columnas and tupla_es_named_tuple:
-        encabezados = tuple(map(lambda x: ' '.join(x.upper().split('_')), tupla._asdict().keys()))
+        if recortar_encabezados is not None and isinstance(recortar_encabezados, int):
+            encabezados = tuple(map(
+                lambda x: ' '.join(x.upper().split('_'))[:recortar_encabezados], 
+                tupla._asdict().keys()
+            ))
+        else:
+            encabezados = tuple(map(
+                lambda x: ' '.join(x.upper().split('_')), 
+                tupla._asdict().keys()
+            ))
+            
         columnas_a_filas = list(zip(*tupla))
         cuerpo = []
         for fila in columnas_a_filas:
 
             # Cortar filas a un maximo tam.
-            if horario_compacto:
+            if estructura_por_horas:
                 nueva_fila = list()
                 for x in fila:
                     if '\\' in x:
@@ -113,9 +125,12 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
         return Table(
             headers=list(encabezados),
             rows=cuerpo,
-            style_name='grid')
+            style_name=estilo_sel)
     elif es_alguna_instancia(tupla, tuple, list) and not tupla_es_named_tuple:
-        encabezados = tuple(map(lambda x: ' '.join(x.upper().split('_')), tupla[0]._asdict().keys()))
+        encabezados = tuple(map(
+            lambda x: ' '.join(x.upper().split('_')), 
+            tupla[0]._asdict().keys()
+        ))
         cuerpo = []
         for fila in tupla:
             nueva_fila = []
@@ -135,7 +150,10 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
             headers=encabezados,
             style_name=formato)
     elif subtabla and tupla_es_named_tuple:
-        encabezados = tuple(map(lambda x: x.upper(), tupla._asdict().keys()))
+        encabezados = tuple(map(
+            lambda x: x.upper(), 
+            tupla._asdict().keys()
+        ))
         cuerpo = []
         for col in tupla:
             if isinstance(col, bool):

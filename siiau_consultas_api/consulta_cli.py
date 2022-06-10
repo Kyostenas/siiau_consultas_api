@@ -25,7 +25,8 @@ from .esquemas import (
     CarreraCompleta, 
     ClaseCompleta,
     DatosSesion,
-    DatosHorarioSiiau
+    DatosHorarioSiiau,
+    Clase
 )
 from .getch import getch
 from .servicio_consulta_siiau import (
@@ -62,7 +63,7 @@ from .servicio_tabla import (
     named_tuple_a_tabla
 )
 from .servicio_horario_siiau import (
-    compactar_horario_por_clases,
+    crear_tabla_por_horas,
     estructurar_horario_por_clases,
 )
 
@@ -85,6 +86,8 @@ TECLAS = Teclas()
 seesion = None
 CICLO_GENERICO = 200010
 SELECCION_USUARIO_DEFECTO = 0
+FLECHA_ACTIVO = '<-----'
+NO_ACTIVO = ''
 
 # (o-------------------------- TRANSFERENCIA INTERNA --------------------------o)
 info_ejecucion = {}
@@ -341,12 +344,15 @@ def agregar_datos_de_inicio():
         )
         datos_est = sesion_para_nombre.horario().datos_estudiante
         nombre_est = datos_est.nombre.title()
-        escribir_archivo_dat(
+        datos_guardados = escribir_archivo_dat(
             f'{DCARP_USUARIOS}{usuario}.dat',
             usuario=usuario,
             contra=contra,
             carreras=carreras,
             nombre=nombre_est
+        )
+        revisar_sesion(
+            datos_usuario=datos_guardados,
         )
     except (IndexError, ValueError, KeyError):
         imprimir(log(error('No se pudo iniciar sesion. Revise los datos'), TRAZO))
@@ -412,11 +418,13 @@ def revisar_archivos():
     revisar_archivo_parametros()
 
 
-def mostrar_horario(compacto: str, 
+def mostrar_horario(por_horas: str,
+                    mini: bool,
                     carrera: str, 
                     ciclo: str, 
                     archivos_usuarios: str):
-    datos_usuario = leer_usuario(archivos_usuarios[0])
+    i_usuario_sel = _obtener_indice_usuario_seleccionado()
+    datos_usuario = leer_usuario(archivos_usuarios[i_usuario_sel])
     sesion_revisada = revisar_sesion(
         datos_usuario=datos_usuario,
         carrera_seleccion=carrera,
@@ -425,21 +433,71 @@ def mostrar_horario(compacto: str,
     try:
         datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
         horario = datos_horario.horario
-        if compacto:
-            estructurado = estructurar_horario_por_clases(horario)
-            compactado = compactar_horario_por_clases(estructurado)
-            tabla = named_tuple_a_tabla(
-                compactado, 
-                por_columnas=True, 
-                horario_compacto=True
-            )
+        if not (por_horas or mini):
+            try:
+                tabla = named_tuple_a_tabla(horario, por_columnas=True)
+                imprimir(tabla)
+            except KeyError:
+                mostrar_horario(
+                    por_horas=por_horas, 
+                    mini=True, 
+                    carrera=carrera, 
+                    ciclo=ciclo, 
+                    archivos_usuarios=archivos_usuarios
+                )
         else:
-            tabla = named_tuple_a_tabla(horario, por_columnas=True)
+            try:
+                estructurado = estructurar_horario_por_clases(horario)
+                compactado = crear_tabla_por_horas(
+                    clases=estructurado,
+                    mini=mini
+                )
+                if mini:
+                    tabla = named_tuple_a_tabla(
+                        tupla=compactado, 
+                        por_columnas=True, 
+                        estructura_por_horas=True,
+                        recortar_encabezados=1,
+                        estilo_sel='presto'
+                    )
+                    encabezados_datos_clases = [
+                        'NRC', 'CLAVE', 'NOMBRE'
+                    ]
+                    datos_clases = []
+                    for clase in estructurado:
+                        clase: Clase
+                        datos_clases.append([
+                            clase.nrc, 
+                            clase.clave_materia,
+                            clase.nombre,
+                        ])
+                    tabla_datos_clases = tabla_generica(
+                        datos=datos_clases,
+                        encabezados=encabezados_datos_clases,
+                        estilo='simple_head',
+                        mostrar_indice=True,
+                        inicio_indice=1
+                    )
+                    tabla = '\n\n'.join([str(tabla), str(tabla_datos_clases)])
+                else:
+                    tabla = named_tuple_a_tabla(
+                        tupla=compactado, 
+                        por_columnas=True, 
+                        estructura_por_horas=True,
+                    )
+                imprimir(tabla)
+            except KeyError:
+                mostrar_horario(
+                    por_horas=por_horas, 
+                    mini=True, 
+                    carrera=carrera, 
+                    ciclo=ciclo, 
+                    archivos_usuarios=archivos_usuarios
+                )
     except IndexError:
         imprimir(log(error('Horario no encontrado. Revise los datos.'), TRAZO))
         exit()
     
-    imprimir(tabla)
 
 
 def mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel):
@@ -449,9 +507,9 @@ def mostrar_usuarios_registrados(archivos_usuarios, i_usuario_sel):
     for i_usuario, archivo_usuario in enumerate(archivos_usuarios):
         datos_usuario = leer_usuario(archivo_usuario)
         if i_usuario_sel == i_usuario:
-            usuario_sel = '<-----'
+            usuario_sel = FLECHA_ACTIVO
         else:
-            usuario_sel = ''
+            usuario_sel = NO_ACTIVO
         usuarios_obtenidos.append(
             [datos_usuario['usuario'], datos_usuario['nombre'], usuario_sel]
         )
@@ -605,14 +663,25 @@ def estatus_siiau(estatus,
     
 @click.command()
 @click.option(
-    '--compacto', 
-    '-c',
+    '--por-horas', 
+    '-ph',
     is_flag=True,
     default=False,
-    help='Mostrar el horario en una tabla compacta que tiene horas por fila.'
+    help='Mostrar el horario en una tabla que tiene horas por fila.'
+)
+@click.option(
+    '--mini',
+    '-m',
+    is_flag=True,
+    default=False,
+    help=(
+        'Mostrar el horario en una tabla con informacion minima. Abajo incluye '
+        'informacion mas completa de cada clase.'
+    )
 )
 @click.option(
     '--carrera',
+    '-ca',
     type=(str),
     help=(
         'Cambiar la carrera de la cual obtener el horario. Por defecto se obtiene '
@@ -621,16 +690,20 @@ def estatus_siiau(estatus,
 )
 @click.option(
     '--ciclo',
+    '-ci',
     type=(str),
     help=(
         'Cambiar el ciclo del cual obtener el horario. Por defecto se obtiene '
         'el ultimo ciclo de la ultima carrera registrada del usuario activo ' 
         'o la seleccionada.'
-    )
+    ),
 )
-def horario_siiau(compacto, carrera, ciclo):
+def horario_siiau(por_horas, mini, carrera, ciclo):
     """
     Obten tu horario de siiau.
+    
+    Si la terminal no tiene suficiente espacio para mostrar el horario,
+    se imprime por defecto el mini.
     """
     if not isinstance(ciclo, int) and ciclo is not None:
         try:
@@ -641,5 +714,5 @@ def horario_siiau(compacto, carrera, ciclo):
     revisar_archivos()
     revisar_si_existe_usuario()
     archivos_usuarios = revisar_archivos_inicio()
-    mostrar_horario(compacto, carrera, ciclo, archivos_usuarios)
+    mostrar_horario(por_horas, mini, carrera, ciclo, archivos_usuarios)
 

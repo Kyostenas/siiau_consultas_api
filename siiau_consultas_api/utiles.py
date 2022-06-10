@@ -138,13 +138,15 @@ def escribir_json(datos, dir_archivo) -> None:
     archivo_json.close()
     
 
-def escribir_archivo_dat(dir_archivo, **datos) -> None:
+def escribir_archivo_dat(dir_archivo, **datos) -> dict:
     """
     Escribir archivo de datos en formato .dat
     """
     with open(dir_archivo, 'wb') as archivo_dat:
         archivo_dat.write(pickle.dumps(datos))
     archivo_dat.close()
+    
+    return datos
 
 
 def leer_archivo_dat(dir_archivo) -> dict:
