@@ -24,8 +24,8 @@ import datetime
 
 CORRECCION_RANGO_HORAS = 5
 DURACION_UNA_CLASE = 55
-FORMATO_VESPERTINO = 'p.m.'
-FORMATO_MATUTINO = 'a.m.'
+FORMATO_VESPERTINO = 'pm'
+FORMATO_MATUTINO = 'am'
 HORA_INICIO_MATERIAS = 0
 HORA_FINAL_MATERIAS = 1
 NOMBRE_DE_MIEMBRO = 0
@@ -120,17 +120,20 @@ def _generar_ref_clase(seccion: str, edificio: str, aula: str):
 def __convertir_formato_24000_a_12h(hora: str):
         """
         Recibe hora en formato hhmm y retorna hh:mm f.f.
-        Ejemplo: '0800'  ->  '8:00 a.m.'
+        Ejemplo:: 
+        
+            '0800'  ->  '8:00 am'
 
         El formato siempre debe ser "hhmm" y caber en la medicion
-        normal de la hora, en caso contrario no se acepta.
-        correcto: 1555
-        correcto: 0015
-        correcto: 2359
-        incorrecto: 66
-        incorrecto: 1090
-        incorrecto: 4515
-        incorrecto: -1055
+        normal de la hora, en caso contrario no se acepta::
+        
+            correcto: 1555
+            correcto: 0015
+            correcto: 2359
+            incorrecto: 66
+            incorrecto: 1090
+            incorrecto: 4515
+            incorrecto: -1055
         """
         hora_entera = int(hora)
         try:
@@ -392,9 +395,6 @@ def _agregar_horas_y_nombres(h_por_horas: dict,
         # 1100 : {'11:00 a.m.\\11:55 a.m.: ...}
         # . . .
         hora_entera_hhmm = int(rango_horas_hmm[i_hora_clase][MITAD_HORA_RANGO_HHMM])
-        if mini:
-            hora_clase = hora_clase.split('\\')[0]
-            hora_clase = hora_clase
         try:
             if not mini:
                 # METODOS MATEMATICOS  --> nombre
@@ -409,7 +409,9 @@ def _agregar_horas_y_nombres(h_por_horas: dict,
                     INDIC_DAT_MAT, nrc_clase, SEP_DAT_MAT
                 ])
             else:
-                h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = nrc_clase
+                h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = ''.join([
+                    clave_clase, SEP, edificio_clase, ' ', aula_clase
+                ])
         except KeyError:
             # Si no existe la fila de esa hora, agregarla
             nuevo_interno = dict()
@@ -423,7 +425,9 @@ def _agregar_horas_y_nombres(h_por_horas: dict,
                     INDIC_DAT_MAT, nrc_clase, SEP_DAT_MAT
                     ])
             else:
-                h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = nrc_clase
+                h_por_horas[hora_entera_hhmm][hora_clase][i_dia] = ''.join([
+                    clave_clase, SEP, edificio_clase, ' ', aula_clase
+                ])
     
 
 def crear_tabla_por_horas(clases, mini: bool=False):
