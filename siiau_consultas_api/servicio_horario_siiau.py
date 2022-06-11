@@ -179,16 +179,24 @@ def __formatear_hora(una_hora: tuple):
 
 def __procesar_rango_horas(inicio: str, final: str):
     """
-    Recibe hora en formato hhmm-hhmm y retorna hh:mm f.f \\n hh:mm f.f.
+    Recibe hora en formato hhmm-hhmm y retorna:: 
+    
+        hh:mm ff\\hh:mm ff
+        
     Ademas, genera un rango de 55 minutos por cada hora abarcada en
     el rango total recibido.
 
-    Ejemplo: '1700-2055'  ->  ['5:00 p.m.\\n 5:55 p.m.', '6:00 p.m.\\n 6:55 p.m.',
-    '7:00 p.m.\\n 7:55 p.m.', '8:00 p.m.\\n 8:55 p.m.']
+    Ejemplo::
+    
+        '1700-2055'  ->  ['5:00 pm\\5:55 pm', '6:00 pm\\6:55 pm',
+        '7:00 pm\\7:55 pm', '8:00 pm\\8:55 pm']
 
-    Ejemplo: '66'  ->  'Sin\\nhora'
-    Ejemplo: '11'  ->  'Sin\\nhora'
-    Ejemplo: '5065-4012'  ->  'Sin\\nhora'
+    Ejemplo:: 
+        
+        '66'        ->  'S/H'
+        '11'        ->  'S/H'
+        '5065-4012' ->  'S/H'
+        '-'         ->  'S/H'
     """
     mitades_de_hora = [inicio, final]
     rango_horas_clase = __rango_horas_hhmm(*map(int, mitades_de_hora), 100)
