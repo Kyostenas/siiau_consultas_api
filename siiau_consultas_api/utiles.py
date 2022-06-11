@@ -23,7 +23,7 @@ la pena instalar una libreria o hacer un script sólo
 para suplirla.
 """
 
-from typing import NamedTuple, Tuple
+from typing import Iterable, NamedTuple, Tuple, Union
 import re, io, json, xlwt, os
 from xlwt import Workbook
 from click import echo
@@ -378,10 +378,29 @@ def leer_tecla(retornar_original = False):
             return ord(ch)
         
 
-def imprimir(texto, nl=True, **kwargs):
+def imprimir(texto, nl=True, err=False, **kwargs):
     """
     Imprime un mensaje en la consola.
     """
-    click.echo(message=texto, nl=nl, **kwargs)
+    click.echo(message=texto, nl=nl, err=err, **kwargs)
+    
 
+def eliminar_repeticiones(iterable: Iterable, 
+                          como_tupla: bool=False
+                         ) -> Union[list, tuple]:
+    """
+    Elimina todas las repeticiones de una iterable.
+    """
+    try:
+        lista_sin_repeticiones = list(set(iterable))
+    except TypeError:
+        lista_sin_repeticiones = []
+        for elemento in iterable:
+            if elemento not in lista_sin_repeticiones:
+                lista_sin_repeticiones.append(elemento)
+    
+    if como_tupla:
+        return tuple(lista_sin_repeticiones)
+    else:
+        return lista_sin_repeticiones
     
