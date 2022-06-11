@@ -55,7 +55,8 @@ from .utiles import (
     escribir_archivo_dat,
     leer_json,
     escribir_json,
-    escribir_excel
+    escribir_excel,
+    eliminar_repeticiones
 )
 from .servicio_tabla import (
     tabla_dos_columnas_valores,
@@ -209,8 +210,11 @@ def revisar_directorios():
                 os.makedirs(directorio)
                 imprimir(log(correcto(f'{directorio} creado'), TRAZO))
         else:
-            msj_error = log(error('se requieren los directorios para funcionar'), TRAZO)
-            exit(imprimir(msj_error))
+            msj_error = log(
+                error('se requieren los directorios para funcionar'),
+                trazo=TRAZO
+            )
+            exit(imprimir(msj_error, err=True))
     
         imprimir(log('presione ENTER para continuar', TRAZO))
         while True:
@@ -285,6 +289,16 @@ def revisar_sesion(datos_usuario: dict,
                 ciclo_reemplazo = ciclo_seleccion
             if carrera_seleccion is not None:
                 carrera_reemplazo = carrera_seleccion
+                carreras: Tuple[CarreraEstudiante] = datos_usuario['carreras']
+                for carrera in carreras:
+                    if carrera.ref_carrera == carrera_seleccion and (
+                        ciclo_seleccion is None):
+                        ciclo_reemplazo = carrera.ciclo_final
+                        break
+            try:
+                ciclo_reemplazo = convertir_ciclo_a_entero(ciclo_reemplazo)
+            except TypeError:
+                pass
             datos_sesion = DatosSesion(
                 cookies=datos_sesion.cookies,
                 pidmp=datos_sesion.pidmp,
@@ -355,8 +369,14 @@ def agregar_datos_de_inicio():
             datos_usuario=datos_guardados,
         )
     except (IndexError, ValueError, KeyError):
-        imprimir(log(error('No se pudo iniciar sesion. Revise los datos'), TRAZO))
-        imprimir(log(error('ingresados o su conexion a internet.'), TRAZO))
+        imprimir(
+            log(error('No se pudo iniciar sesion. Revise los datos'), TRAZO),
+            err=True
+        )
+        imprimir(
+            log(error('ingresados o su conexion a internet.'), TRAZO),
+            err=True
+        )
         exit()
         
 
@@ -384,7 +404,10 @@ def mostrar_estatus(arhivo_usuario: str, mostrar_todo: bool, carrera_sel: str):
             )
             imprimir(tabla_datos)
         except ValueError:
-            imprimir(log(error('Carrera no encontrada.'), TRAZO))
+            imprimir(
+                log(error('Carrera no encontrada.'), TRAZO),
+                err=True
+            )
             exit()
         
     
@@ -422,9 +445,9 @@ def mostrar_horario(por_horas: str,
                     mini: bool,
                     carrera: str, 
                     ciclo: str, 
-                    archivos_usuarios: str):
+                    nombres_archivos_usuarios: str):
     i_usuario_sel = _obtener_indice_usuario_seleccionado()
-    datos_usuario = leer_usuario(archivos_usuarios[i_usuario_sel])
+    datos_usuario = leer_usuario(nombres_archivos_usuarios[i_usuario_sel])
     sesion_revisada = revisar_sesion(
         datos_usuario=datos_usuario,
         carrera_seleccion=carrera,
@@ -443,7 +466,7 @@ def mostrar_horario(por_horas: str,
                     mini=True, 
                     carrera=carrera, 
                     ciclo=ciclo, 
-                    archivos_usuarios=archivos_usuarios
+                    nombres_archivos_usuarios=nombres_archivos_usuarios
                 )
         else:
             try:
@@ -458,20 +481,21 @@ def mostrar_horario(por_horas: str,
                         por_columnas=True, 
                         estructura_por_horas=True,
                         recortar_encabezados=1,
-                        estilo_sel='presto'
+                        estilo_sel='grid'
                     )
                     encabezados_datos_clases = [
-                        'NRC', 'CLAVE', 'SEC', 'NOMBRE'
+                        'CLAVE', 'NRC', 'SEC', 'NOMBRE'
                     ]
                     datos_clases = []
                     for clase in estructurado:
                         clase: Clase
                         datos_clases.append([
-                            clase.nrc, 
                             clase.clave_materia,
+                            clase.nrc, 
                             clase.seccion,
                             clase.nombre,
                         ])
+                    datos_clases = eliminar_repeticiones(datos_clases)
                     tabla_datos_clases = tabla_generica(
                         datos=datos_clases,
                         encabezados=encabezados_datos_clases,
@@ -493,10 +517,13 @@ def mostrar_horario(por_horas: str,
                     mini=True, 
                     carrera=carrera, 
                     ciclo=ciclo, 
-                    archivos_usuarios=archivos_usuarios
+                    nombres_archivos_usuarios=nombres_archivos_usuarios
                 )
-    except IndexError:
-        imprimir(log(error('Horario no encontrado. Revise los datos.'), TRAZO))
+    except (IndexError, AttributeError, ValueError):
+        imprimir(
+            log(error('Horario no encontrado. Revise los datos.'), TRAZO),
+            err=True
+        )
         exit()
     
 
@@ -571,8 +598,14 @@ def revisar_si_existe_usuario():
     parametros = leer_json(DIR_PARAMETROS)
     usuario_seleccionado = parametros['usuario_seleccionado']
     if usuario_seleccionado is None:
-        imprimir(log(error('No hay usuario seleccionado.'), TRAZO))
-        imprimir(log('Utilize "siiau -nu" para agregar un usuario.', TRAZO))
+        imprimir(
+            log(error('No hay usuario seleccionado.'), TRAZO),
+            err=True
+        )
+        imprimir(
+            log('Utilize "siiau -nu" para agregar un usuario.', TRAZO),
+            err=True
+        )
         exit()
         
         
@@ -710,7 +743,10 @@ def horario_siiau(por_horas, mini, carrera, ciclo):
         try:
             ciclo = convertir_ciclo_a_entero(ciclo)
         except (ValueError, TypeError):
-            imprimir(log(error('Ciclo invalido.'), TRAZO))
+            imprimir(
+                log(error('Ciclo invalido.'), TRAZO),
+                err=True
+            )
             exit()
     revisar_archivos()
     revisar_si_existe_usuario()
