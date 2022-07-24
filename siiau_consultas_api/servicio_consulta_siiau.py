@@ -479,7 +479,6 @@ def carreras(centro_cup_id: str) -> Tuple[CarreraCompleta]:
 
 
 def grupo_de_clases(id_carrera: str, claves_materias: List[str]):
-    print(claves_materias)
     tabla_clases = __tabla_clases(id_carrera)
     clases_completas = []
     prog_compl = 0

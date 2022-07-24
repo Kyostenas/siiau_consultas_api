@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .utiles import es_alguna_instancia, tam_consola
+from .utiles import es_alguna_instancia, obtener_cols_consola
 
 from textwrap import wrap
 from prettyTables import Table
@@ -44,13 +44,10 @@ MARGENES_Y_BORDES_TABLA_2_COLS = 7
 
 def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         subtabla=False,
-                        tam_col=0,
                         por_columnas=False,
                         estructura_por_horas=False,
                         recortar_encabezados:int=None,
                         estilo_sel:str='grid'):
-    tam_terminal = get_terminal_size().columns
-    tam_max_tabla = tam_terminal if not subtabla else tam_col
     tupla_es_named_tuple = hasattr(tupla, '_asdict')
     if por_columnas and tupla_es_named_tuple:
         if recortar_encabezados is not None and isinstance(recortar_encabezados, int):
@@ -86,8 +83,8 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                                     indice_para_insertar = i_parte
                                 partes_de_la_parte = parte.split('%')
                                 cuerpo_sub_tabla_informativa.append(partes_de_la_parte)
-                            if len(parte) > MAX_TAM_COL:
-                                partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_COL))
+                            # if len(parte) > MAX_TAM_COL:
+                            #     partes[i_parte] = '\n'.join(wrap(parte, MAX_TAM_COL))
                         if formar_sub_tabla_informativa:
                             i_parte = 0
                             while i_parte < len(partes) + 1:
@@ -104,10 +101,12 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                                 style_name='presto'
                             )
                             subtabla_informativa.show_headers = False
+                            subtabla_informativa.auto_wrap = True
                             partes.append(str(subtabla_informativa))
                         nuevo_elemento = '\n'.join(partes)
                     else:
-                        nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_COL))
+                        # nuevo_elemento = '\n'.join(wrap(x, MAX_TAM_COL))
+                        nuevo_elemento = x
                     nueva_fila.append(nuevo_elemento)
                 nueva_fila = tuple(nueva_fila)
             else:
@@ -117,15 +116,17 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                         col = 'si' if col else ''
                     if '\\' in col:
                         col = col.replace('\\', '\n')
-                    else:
-                        col = '\n'.join([*wrap(col, MAX_TAM_COL)])
+                    # else:
+                    #     col = '\n'.join([*wrap(col, MAX_TAM_COL)])
                     nueva_fila.append(col)
                 nueva_fila = tuple(nueva_fila)
             cuerpo.append(nueva_fila)
-        return Table(
+        tabla = Table(
             headers=list(encabezados),
             rows=cuerpo,
             style_name=estilo_sel)
+        tabla.auto_wrap = True
+        return tabla
     elif es_alguna_instancia(tupla, tuple, list) and not tupla_es_named_tuple:
         encabezados = tuple(map(
             lambda x: ' '.join(x.upper().split('_')), 
@@ -142,13 +143,16 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
                 else:
                     if isinstance(col, bool):
                         col = 'si' if col else ''
-                    nueva_fila.append('\n'.join([*wrap(str(col), 15)]))
+                    # nueva_fila.append('\n'.join([*wrap(str(col), 15)]))
+                    nueva_fila.append(col)
             cuerpo.append(nueva_fila)
         formato = 'grid' if not subtabla else 'simple'
-        return Table(
+        tabla = Table(
             tabular_data=cuerpo,
             headers=encabezados,
             style_name=formato)
+        tabla.auto_wrap = True        
+        return tabla
     elif subtabla and tupla_es_named_tuple:
         encabezados = tuple(map(
             lambda x: x.upper(), 
@@ -159,15 +163,19 @@ def named_tuple_a_tabla(tupla: Union[NamedTuple, List[NamedTuple]],
             if isinstance(col, bool):
                 col = 'si' if col else ''
             cuerpo.append(col)
-        return Table(
+        tabla = Table(
             tabular_data=[cuerpo],
             headers=encabezados,
             tablefmt='plain')
+        tabla.auto_wrap = True            
+        return tabla
 
 
 def tabla_dos_columnas_valores(datos: Union[NamedTuple, List], 
-                               espacio_total: int=tam_consola()['cols'], 
+                               espacio_total: int=None, 
                                estilo: str = 'pretty_grid'):
+    if espacio_total is None:
+        espacio_total = obtener_cols_consola()
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     if isinstance(datos, list):
         filas_tabla = datos
@@ -179,10 +187,11 @@ def tabla_dos_columnas_valores(datos: Union[NamedTuple, List],
         valores = list(map(lambda x: x, valores))
         filas_tabla = list(zip(llaves, valores))
         filas_tabla = list(map(list, filas_tabla))
-    for i_fila, fila in enumerate(filas_tabla):
-        for i_col, col in enumerate(fila):
-            filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
+    # for i_fila, fila in enumerate(filas_tabla):
+    #     for i_col, col in enumerate(fila):
+    #         filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
     tabla = Table(rows=filas_tabla, style_name=estilo)
+    tabla.auto_wrap = True
     tabla.show_headers = False
     
     return tabla
@@ -193,21 +202,24 @@ def tabla_generica(datos: Union[
                        List[Union[NamedTuple, List]]
                     ],
                    encabezados:Union[NamedTuple, List] = None,
-                   espacio_total: int=tam_consola()['cols'],
+                   espacio_total: int=None,
                    estilo='fancy_grid',
                    mostrar_indice: bool=False,
                    inicio_indice: int=0,
                    paso_indice: int=1,):
+    if espacio_total is None:
+        espacio_total = obtener_cols_consola()
     tam_columna = (espacio_total - MARGENES_Y_BORDES_TABLA_2_COLS) // 2
     filas_tabla = datos
-    for i_fila, fila in enumerate(filas_tabla):
-        for i_col, col in enumerate(fila):
-            filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
+    # for i_fila, fila in enumerate(filas_tabla):
+    #     for i_col, col in enumerate(fila):
+    #         filas_tabla[i_fila][i_col] = '\n'.join(wrap(col, tam_columna))
     tabla = Table(
         rows=filas_tabla, 
         headers=encabezados, 
         style_name=estilo
     )
+    tabla.auto_wrap = True
     tabla.show_index = mostrar_indice
     tabla.index_start = inicio_indice
     tabla.index_step = paso_indice

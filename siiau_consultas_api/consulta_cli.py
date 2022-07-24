@@ -456,18 +456,18 @@ def mostrar_horario(por_horas: str,
     try:
         datos_horario: DatosHorarioSiiau = sesion_revisada.horario()
         horario = datos_horario.horario
-        if not (por_horas or mini):
-            try:
-                tabla = named_tuple_a_tabla(horario, por_columnas=True)
-                imprimir(tabla)
-            except KeyError:
-                mostrar_horario(
-                    por_horas=por_horas, 
-                    mini=True, 
-                    carrera=carrera, 
-                    ciclo=ciclo, 
-                    nombres_archivos_usuarios=nombres_archivos_usuarios
-                )
+        if not (por_horas or mini): 
+            # try:
+            tabla = named_tuple_a_tabla(horario, por_columnas=True)
+            imprimir(tabla)
+            # except KeyError:
+            #     mostrar_horario(
+            #         por_horas=por_horas, 
+            #         mini=True, 
+            #         carrera=carrera, 
+            #         ciclo=ciclo, 
+            #         nombres_archivos_usuarios=nombres_archivos_usuarios
+            #     )
         else:
             try:
                 estructurado = estructurar_horario_por_clases(horario)

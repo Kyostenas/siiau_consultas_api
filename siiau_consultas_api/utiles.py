@@ -45,6 +45,7 @@ VALORES_CICLOS = {
 ELIMINADOR_ANSI = re.compile(r'\x1b\[[\d]*m')
 
 ESC_CODE = '\x1b'
+TAM_CONSOLA_DEFECTO = 500
 
 
 def convertir_ciclo_a_entero(ciclo: str) -> int:
@@ -403,4 +404,15 @@ def eliminar_repeticiones(iterable: Iterable,
         return tuple(lista_sin_repeticiones)
     else:
         return lista_sin_repeticiones
+
+
+def obtener_cols_consola():
+    """
+    Obtiene el numero de columnas de la consola.
     
+    Si no se puede obtener, se retorna un numero por defecto.
+    """
+    try:
+        return tam_consola()['cols']
+    except OSError:
+        return TAM_CONSOLA_DEFECTO
